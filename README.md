@@ -40,4 +40,5 @@ Common commands are available through `make help`. On Windows, run the listed
 Poetry and Docker commands directly if GNU Make is unavailable.
 
 The backend exposes `/healthz`, `/readyz`, `/version`, `/api/schema/`, and
-`/api/docs/`. Janus remains intentionally empty until its dedicated phase.
+`/api/docs/`. The Nginx root URL redirects to the Swagger UI. Janus remains
+intentionally empty until its dedicated phase.
