@@ -104,7 +104,15 @@ CELERY_TASK_SOFT_TIME_LIMIT = 25
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "accounts.authentication.ServiceKeyAuthentication",
+    ],
+    "DEFAULT_THROTTLE_RATES": {"login": "5/min", "service": "60/min"},
 }
+
+LOGIN_MAX_FAILURES = int(env("LOGIN_MAX_FAILURES", "5"))
+LOGIN_LOCKOUT_SECONDS = int(env("LOGIN_LOCKOUT_SECONDS", "900"))
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cerberus Core API",
