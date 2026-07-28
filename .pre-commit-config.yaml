@@ -1,0 +1,26 @@
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: local
+    hooks:
+      - id: backend-ruff
+        name: backend ruff
+        entry: poetry -C backend run ruff check .
+        language: system
+        pass_filenames: false
+      - id: janus-ruff
+        name: janus ruff
+        entry: poetry -C janus run ruff check .
+        language: system
+        pass_filenames: false
+      - id: backend-mypy
+        name: backend mypy
+        entry: poetry -C backend run mypy .
+        language: system
+        pass_filenames: false
+      - id: janus-mypy
+        name: janus mypy
+        entry: poetry -C janus run mypy .
+        language: system
+        pass_filenames: false
