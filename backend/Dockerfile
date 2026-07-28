@@ -7,9 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN pip install --no-cache-dir "poetry>=2.0,<3.0"
+RUN groupadd --system cerberus && useradd --system --gid cerberus --create-home cerberus
 COPY pyproject.toml ./
 RUN poetry install --only main --no-root
 COPY . ./
+RUN chown -R cerberus:cerberus /app
+
+USER cerberus
 
 EXPOSE 8000
 
