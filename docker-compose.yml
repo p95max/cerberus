@@ -30,16 +30,40 @@ services:
       context: ./backend
     environment:
       CERBERUS_ENV: development
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SECRET_KEY: change-me-for-local-development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cerberus}:${POSTGRES_PASSWORD:-change-me-for-local-development}@postgres:5432/${POSTGRES_DB:-cerberus}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()"]
       interval: 10s
       timeout: 3s
       retries: 3
+
+  celery_worker:
+    build:
+      context: ./backend
+    command: celery -A config worker --loglevel=INFO
+    environment:
+      CERBERUS_ENV: development
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SECRET_KEY: change-me-for-local-development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cerberus}:${POSTGRES_PASSWORD:-change-me-for-local-development}@postgres:5432/${POSTGRES_DB:-cerberus}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   janus:
     build:

@@ -11,6 +11,6 @@ COPY pyproject.toml ./
 RUN poetry install --only main --no-root
 COPY . ./
 
-# Phase 1 has no Django application yet. Keep the service running so the empty
-# development stack can be verified; Phase 2 replaces this with the web server.
-CMD ["python", "-c", "import time; time.sleep(2147483647)"]
+EXPOSE 8000
+
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"]

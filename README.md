@@ -5,7 +5,8 @@ one product in a single monorepository.
 
 ## Architecture
 
-- **Cerberus Core** (`backend/`) is the Django business platform.
+- **Cerberus Core** (`backend/`) is the Django business platform, with
+  PostgreSQL, Redis, Celery, and a documented REST API.
 - **Janus** (`janus/`) is an internal FastAPI recognition service for ANPR/OCR
   and confidence scoring.
 - **PostgreSQL** stores application data; **Redis** is reserved for cache and
@@ -38,5 +39,5 @@ scripts/    Developer and operational scripts
 Common commands are available through `make help`. On Windows, run the listed
 Poetry and Docker commands directly if GNU Make is unavailable.
 
-The first phase deliberately contains no Django or FastAPI application code;
-those foundations are introduced in subsequent phases.
+The backend exposes `/healthz`, `/readyz`, `/version`, `/api/schema/`, and
+`/api/docs/`. Janus remains intentionally empty until its dedicated phase.

@@ -7,11 +7,20 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
+Django = "^5.2.0"
+djangorestframework = "^3.16.0"
+drf-spectacular = "^0.28.0"
+psycopg = { version = "^3.2.0", extras = ["binary"] }
+dj-database-url = "^2.3.0"
+celery = { version = "^5.5.0", extras = ["redis"] }
+gunicorn = "^23.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.0"
 mypy = "^1.16.0"
 pytest = "^8.4.0"
+pytest-django = "^4.11.0"
+django-stubs = { version = "^5.2.0", extras = ["compatible-mypy"] }
 pre-commit = "^4.2.0"
 
 [tool.ruff]
@@ -21,10 +30,22 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["cerberus_core"]
+files = ["accounts", "config"]
+plugins = ["mypy_django_plugin.main"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"
