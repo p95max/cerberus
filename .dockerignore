@@ -1,0 +1,39 @@
+# Repository and editor metadata
+.git/
+.github/
+.idea/
+.vscode/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python, test, and build artifacts
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.hypothesis/
+**/.tox/
+**/.nox/
+**/.venv/
+**/venv/
+**/.verification-venv/
+**/pytest-cache-files*/
+**/.coverage
+**/.coverage.*
+**/htmlcov/
+**/build/
+**/dist/
+**/*.egg-info/
+**/*.sqlite3
+**/*.db
+**/*.log
+
+# Other generated dependencies and operating-system files
+**/node_modules/
+**/.next/
+**/.DS_Store
+**/Thumbs.db

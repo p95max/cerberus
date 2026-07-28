@@ -6,6 +6,20 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+.verification-venv/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+*.sqlite3
+*.db
+pytest-cache-files*/
 
 # Environment files
 .env
@@ -16,6 +30,14 @@ venv/
 .idea/
 .vscode/
 *.log
+*.tmp
+*.swp
+*.swo
+*.code-workspace
+
+# Frontend or generated artifacts that may appear in the monorepo
+node_modules/
+.next/
 
 # OS files
 .DS_Store
