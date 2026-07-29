@@ -7,7 +7,8 @@
     <label>Site<select name="site"><option value="">All sites</option>{% for site in sites %}<option value="{{ site.pk }}" {% if request.GET.site == site.pk|stringformat:'s' %}selected{% endif %}>{{ site.name }}</option>{% endfor %}</select></label>
     <label>Gate<select name="gate"><option value="">All gates</option>{% for gate in gates %}<option value="{{ gate.pk }}" {% if request.GET.gate == gate.pk|stringformat:'s' %}selected{% endif %}>{{ gate.name }}</option>{% endfor %}</select></label>
     <label>Plate<input name="plate" value="{{ request.GET.plate }}" placeholder="A123BC77"></label>
-    <label>Decision<select name="decision"><option value="">All decisions</option>{% for value, label in outcomes %}<option value="{{ value }}" {% if request.GET.decision == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Decision<select name="decision"><option value="">All decisions</option>{% for value, label in outcomes %}<option value="{{ value }}" {% if request.GET.decision == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% if show_case_status %}
+    <label>Case<select name="case"><option value="">All cases</option><option value="open" {% if request.GET.case == "open" %}selected{% endif %}>Open</option><option value="closed" {% if request.GET.case == "closed" %}selected{% endif %}>Closed</option></select></label>{% endif %}
     <label>From<input type="datetime-local" name="from" value="{{ request.GET.from }}"></label>
     <label>To<input type="datetime-local" name="to" value="{{ request.GET.to }}"></label>
       <button type="submit">Apply filters</button>

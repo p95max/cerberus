@@ -146,10 +146,21 @@ def test_operator_can_close_manual_review_case_with_audited_actor(
         details__event_id=manual_review_event.pk,
     ).exists()
 
+    reopen = client.post(
+        f"/operator/events/{manual_review_event.pk}/", {"action": "open"}
+    )
+    assert reopen.status_code == 302
+    assert manual_review_event.decision.barrier_commands.count() == 0
+
     queue = client.get("/operator/manual-review/")
     assert queue.status_code == 200
     assert b"Case" in queue.content
     assert b"Closed" in queue.content
+
+    open_cases = client.get("/operator/manual-review/", {"case": "open"})
+    closed_cases = client.get("/operator/manual-review/", {"case": "closed"})
+    assert open_cases.context["events_count"] == 0
+    assert closed_cases.context["events_count"] == 1
 
 
 @pytest.mark.django_db

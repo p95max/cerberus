@@ -82,6 +82,17 @@ def filtered_events(request: HttpRequest) -> QuerySet[RecognitionEvent]:
         events = events.filter(normalized_plate__icontains=normalized)
     if decision := request.GET.get("decision"):
         events = events.filter(decision__outcome=decision)
+    if case_status := request.GET.get("case"):
+        if case_status == "open":
+            events = events.filter(
+                decision__outcome=AccessDecision.Outcome.MANUAL_REVIEW,
+                decision__manual_review_closed_at__isnull=True,
+            )
+        elif case_status == "closed":
+            events = events.filter(
+                decision__outcome=AccessDecision.Outcome.MANUAL_REVIEW,
+                decision__manual_review_closed_at__isnull=False,
+            )
     for parameter, lookup in (("from", "captured_at__gte"), ("to", "captured_at__lte")):
         if value := request.GET.get(parameter):
             try:
@@ -205,6 +216,9 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                     details={"event_id": event.pk},
                 )
                 messages.success(request, "Manual-review case closed.")
+            return redirect("operator-event-detail", pk=event.pk)
+        if event.decision.manual_review_closed_at is not None:
+            messages.error(request, "A closed manual-review case cannot open the barrier.")
             return redirect("operator-event-detail", pk=event.pk)
         if action != "open":
             messages.error(request, "Choose Open to queue a manual barrier command.")
