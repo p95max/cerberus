@@ -88,6 +88,8 @@ After sign-in, the console provides:
 
 Administrators and managers can create and edit configuration. Operators and read-only users can view the same configuration pages without forms or edit actions.
 
+The mock barrier automatically closes after 10 seconds by default. Its countdown is shown on the event page and the automatic close is recorded in Audit history. Change `BARRIER_AUTO_CLOSE_SECONDS` in `.env` when a different delay is needed.
+
 ## Endpoints
 
 All public URLs are served through Nginx on `http://localhost:8080` by default.

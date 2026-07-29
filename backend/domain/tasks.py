@@ -20,6 +20,30 @@ AGGREGATE_RETENTION_AUDIT_ACTIONS = (
 
 
 @shared_task
+def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
+    """Mark a mock barrier command closed and leave an auditable event history."""
+    with transaction.atomic():
+        command = (
+            BarrierCommand.objects.select_for_update().select_related("decision").get(pk=command_id)
+        )
+        if command.closed_at is not None:
+            return {"command_id": command.pk, "status": command.status}
+
+        command.status = BarrierCommand.Status.CLOSED
+        command.closed_at = timezone.now()
+        command.save(update_fields=("status", "closed_at", "updated_at"))
+        AuditLog.objects.create(
+            action="barrier_closed_automatically",
+            details={
+                "event_id": command.decision.event_id,
+                "command_id": command.pk,
+                "gate_id": command.gate_id,
+            },
+        )
+    return {"command_id": command.pk, "status": command.status}
+
+
+@shared_task
 def purge_expired_recognition_events() -> dict[str, Any]:
     """Remove expired events and image metadata in bounded transactions."""
     now = timezone.now()

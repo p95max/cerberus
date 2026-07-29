@@ -185,6 +185,7 @@ class BarrierCommand(TimeStampedModel):
         ACKNOWLEDGED = "acknowledged", "Acknowledged"
         FAILED = "failed", "Failed"
         EXPIRED = "expired", "Expired"
+        CLOSED = "closed", "Closed"
 
     decision = models.ForeignKey(
         AccessDecision, on_delete=models.PROTECT, related_name="barrier_commands"
@@ -192,6 +193,8 @@ class BarrierCommand(TimeStampedModel):
     gate = models.ForeignKey(Gate, on_delete=models.PROTECT, related_name="barrier_commands")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    auto_close_at = models.DateTimeField(blank=True, null=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )

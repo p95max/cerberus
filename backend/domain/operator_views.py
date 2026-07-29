@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, ClassVar
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -39,6 +41,7 @@ from domain.models import (
     Vehicle,
 )
 from domain.services.retention import retention_policy_defaults
+from domain.tasks import close_barrier_after_delay
 
 
 class OperatorLoginView(LoginView):
@@ -145,6 +148,14 @@ class EventDetailView(OperatorAccessMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context["audit_history"] = AuditLog.objects.filter(details__event_id=self.object.pk)
+        context["active_barrier_command"] = (
+            self.object.decision.barrier_commands.filter(
+                status=BarrierCommand.Status.PENDING,
+                auto_close_at__isnull=False,
+            )
+            .order_by("-created_at")
+            .first()
+        )
         return context
 
     def post(self, request: HttpRequest, pk: int) -> HttpResponse:
@@ -159,18 +170,33 @@ class EventDetailView(OperatorAccessMixin, DetailView):
         if request.POST.get("action") != "open":
             messages.error(request, "Choose Open to queue a manual barrier command.")
             return redirect("operator-event-detail", pk=event.pk)
+        if event.decision.barrier_commands.filter(status=BarrierCommand.Status.PENDING).exists():
+            messages.error(request, "A barrier command is already active for this event.")
+            return redirect("operator-event-detail", pk=event.pk)
+        auto_close_at = timezone.now() + timedelta(seconds=settings.BARRIER_AUTO_CLOSE_SECONDS)
         command = BarrierCommand.objects.create(
             decision=event.decision,
             gate=event.camera.gate,
             requested_by=request.user,
+            auto_close_at=auto_close_at,
         )
         record_audit(
             "manual_barrier_command_requested",
             request=request,
             actor=request.user,
-            details={"event_id": event.pk, "command_id": command.pk},
+            details={
+                "event_id": event.pk,
+                "command_id": command.pk,
+                "auto_close_at": auto_close_at.isoformat(),
+            },
         )
-        messages.success(request, "Barrier command queued for the mock controller.")
+        transaction.on_commit(
+            lambda: close_barrier_after_delay.apply_async(args=[command.pk], eta=auto_close_at)
+        )
+        messages.success(
+            request,
+            "Barrier opened in the mock controller; automatic close is scheduled.",
+        )
         return redirect("operator-event-detail", pk=event.pk)
 
 

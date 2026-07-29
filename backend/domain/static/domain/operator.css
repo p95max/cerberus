@@ -40,6 +40,16 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .deny { background: #742d35; color: #ffc1c7; }
 .manual_review { background: #624d14; color: #ffe58b; }
 .detail-grid, .management-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.decision-card h2 { margin: .15rem 0 .75rem; }
+.section-kicker { color: #8b949e; font-size: .78rem; letter-spacing: .12em; margin: 0; text-transform: uppercase; }
+.decision-reason { border-left: 3px solid #f2cc60; color: #e6edf3; margin: 0 0 1.25rem; padding-left: .85rem; }
+.event-facts { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.event-facts > div { background: #0d1117; border: 1px solid #30363d; border-radius: .4rem; min-width: 0; padding: .7rem; }
+.event-facts dd, .event-facts dt { margin: 0; }
+.event-facts dt { color: #8b949e; font-size: .75rem; margin-bottom: .25rem; text-transform: uppercase; }
+.barrier-timer { background: #1b5e3a; border: 1px solid #2ea043; border-radius: .5rem; margin: 1rem 0; padding: .9rem; }
+.barrier-timer strong { display: block; font-size: 1.35rem; margin-top: .3rem; }
+.barrier-timer p { color: #b7f7ca; margin: .4rem 0 0; }
 .management-grid.read-only { grid-template-columns: 1fr; }
 .settings-tabs { border-bottom: 1px solid #30363d; display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1.5rem; }
 .settings-tabs a { border-bottom: 2px solid transparent; color: #8ecbff; padding: .6rem .75rem; text-decoration: none; }

@@ -10,6 +10,7 @@ from django.utils import timezone
 from accounts.models import AuditLog, User
 from accounts.roles import ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
 from domain.models import AccessDecision, Camera, Gate, ParkingSite, RecognitionEvent
+from domain.tasks import close_barrier_after_delay
 
 
 @pytest.fixture
@@ -112,7 +113,31 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     assert rejected.status_code == 302
     assert accepted.status_code == 302
     assert manual_review_event.decision.barrier_commands.count() == 1
+    command = manual_review_event.decision.barrier_commands.get()
+    assert command.auto_close_at is not None
     assert AuditLog.objects.filter(action="manual_barrier_command_requested").exists()
+
+
+@pytest.mark.django_db
+def test_automatic_barrier_close_is_recorded(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    command = manual_review_event.decision.barrier_commands.create(
+        gate=manual_review_event.camera.gate,
+        requested_by=operator,
+        auto_close_at=timezone.now(),
+    )
+
+    result = close_barrier_after_delay.run(command.pk)
+
+    command.refresh_from_db()
+    assert result["status"] == "closed"
+    assert command.status == "closed"
+    assert command.closed_at is not None
+    assert AuditLog.objects.filter(
+        action="barrier_closed_automatically",
+        details__command_id=command.pk,
+    ).exists()
 
 
 @pytest.mark.django_db
