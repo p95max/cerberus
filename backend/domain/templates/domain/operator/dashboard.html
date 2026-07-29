@@ -1,6 +1,6 @@
 {% extends "domain/operator/base.html" %}
 {% block content %}
-  <div class="page-heading"><div><p class="eyebrow">Operator console</p><h1>{{ title }}</h1></div><a class="button secondary" href="{% url 'manual-review-queue' %}">Review queue</a></div>
+  <div class="page-heading"><div><p class="eyebrow">Operator console</p><h1>{{ title }}</h1></div></div>
   <details class="filters-panel" {% if request.GET %}open{% endif %}>
     <summary>Filters</summary>
     <form class="filters" method="get">
