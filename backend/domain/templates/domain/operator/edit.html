@@ -1,0 +1,4 @@
+{% extends "domain/operator/base.html" %}
+{% block content %}
+  <p><a href="{% url 'manage-resource' resource %}">← Back to management</a></p><h1>Edit {{ item }}</h1><form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Save changes</button></form>
+{% endblock %}

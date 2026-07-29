@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from accounts.audit import record_audit
 from accounts.authentication import ServiceKeyAuthentication
 from domain.serializers import RecognitionEventRequestSerializer, RecognitionEventResponseSerializer
 from domain.services.recognition import submit_recognition_event
@@ -71,6 +72,13 @@ class RecognitionEventAPIView(APIView):
             "decision": submission.decision.outcome,
             "reason": submission.decision.reason,
         }
+        if submission.created:
+            record_audit(
+                "recognition_event_received",
+                request=request,
+                actor=request.user,
+                details={"event_id": submission.event.pk, "decision": submission.decision.outcome},
+            )
         return Response(
             body, status=status.HTTP_201_CREATED if submission.created else status.HTTP_200_OK
         )

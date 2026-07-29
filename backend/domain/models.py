@@ -33,6 +33,9 @@ class ParkingSite(SoftDeleteModel):
     name = models.CharField(max_length=120)
     address = models.CharField(max_length=255, blank=True)
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class Gate(SoftDeleteModel):
     class Direction(models.TextChoices):
@@ -49,17 +52,26 @@ class Gate(SoftDeleteModel):
             models.UniqueConstraint(fields=("site", "external_id"), name="unique_gate_external_id")
         ]
 
+    def __str__(self) -> str:
+        return f"{self.site.name} / {self.name}"
+
 
 class Camera(SoftDeleteModel):
     gate = models.ForeignKey(Gate, on_delete=models.PROTECT, related_name="cameras")
     external_id = models.CharField(max_length=64, unique=True)
     name = models.CharField(max_length=120)
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class Vehicle(SoftDeleteModel):
     normalized_plate = models.CharField(max_length=32, unique=True)
     display_plate = models.CharField(max_length=32)
     owner_name = models.CharField(max_length=120, blank=True)
+
+    def __str__(self) -> str:
+        return self.display_plate
 
 
 class AccessList(SoftDeleteModel):
@@ -75,6 +87,9 @@ class AccessList(SoftDeleteModel):
         constraints = [
             models.UniqueConstraint(fields=("site", "name"), name="unique_access_list_name")
         ]
+
+    def __str__(self) -> str:
+        return f"{self.site.name} / {self.name}"
 
 
 class AccessRule(SoftDeleteModel):
@@ -102,6 +117,9 @@ class AccessRule(SoftDeleteModel):
     class Meta:
         indexes = [models.Index(fields=("vehicle", "is_active", "priority"))]
 
+    def __str__(self) -> str:
+        return f"{self.vehicle.display_plate}: {self.decision}"
+
 
 class RecognitionEvent(TimeStampedModel):
     recognition_request_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -121,6 +139,9 @@ class RecognitionEvent(TimeStampedModel):
             models.Index(fields=("normalized_plate", "captured_at")),
         ]
 
+    def __str__(self) -> str:
+        return f"{self.normalized_plate} at {self.captured_at:%Y-%m-%d %H:%M:%S}"
+
 
 class AccessDecision(TimeStampedModel):
     class Outcome(models.TextChoices):
@@ -137,6 +158,9 @@ class AccessDecision(TimeStampedModel):
     decided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )
+
+    def __str__(self) -> str:
+        return f"{self.event.normalized_plate}: {self.outcome}"
 
 
 class BarrierCommand(TimeStampedModel):
@@ -156,6 +180,9 @@ class BarrierCommand(TimeStampedModel):
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )
+
+    def __str__(self) -> str:
+        return f"{self.gate.name}: {self.status}"
 
 
 class OperatorProfile(TimeStampedModel):

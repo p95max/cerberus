@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from django import forms
+
+from domain.models import AccessList, AccessRule, Camera, Gate, ParkingSite, Vehicle
+
+
+class ParkingSiteForm(forms.ModelForm):
+    class Meta:
+        model = ParkingSite
+        fields = ("external_id", "name", "address", "is_active")
+
+
+class GateForm(forms.ModelForm):
+    class Meta:
+        model = Gate
+        fields = ("site", "external_id", "name", "direction", "is_active")
+
+
+class CameraForm(forms.ModelForm):
+    class Meta:
+        model = Camera
+        fields = ("gate", "external_id", "name", "is_active")
+
+
+class VehicleForm(forms.ModelForm):
+    class Meta:
+        model = Vehicle
+        fields = ("normalized_plate", "display_plate", "owner_name", "is_active")
+
+
+class AccessListForm(forms.ModelForm):
+    class Meta:
+        model = AccessList
+        fields = ("site", "name", "kind", "is_active")
+
+
+class AccessRuleForm(forms.ModelForm):
+    class Meta:
+        model = AccessRule
+        fields = (
+            "access_list",
+            "vehicle",
+            "gate",
+            "decision",
+            "priority",
+            "valid_from",
+            "valid_until",
+            "allowed_weekdays",
+            "allowed_from_time",
+            "allowed_until_time",
+            "is_active",
+        )
+        widgets = {
+            "valid_from": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "valid_until": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "allowed_from_time": forms.TimeInput(attrs={"type": "time"}),
+            "allowed_until_time": forms.TimeInput(attrs={"type": "time"}),
+            "allowed_weekdays": forms.TextInput(attrs={"placeholder": "[0, 1, 2, 3, 4]"}),
+        }

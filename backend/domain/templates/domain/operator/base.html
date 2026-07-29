@@ -1,0 +1,29 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Cerberus Operator{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'domain/operator.css' %}">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="{% url 'operator-dashboard' %}">CERBERUS</a>
+      {% if user.is_authenticated %}
+        <nav>
+          <a href="{% url 'operator-dashboard' %}">Events</a>
+          <a href="{% url 'manual-review-queue' %}">Manual review</a>
+          <a href="{% url 'manage-resource' 'vehicles' %}">Vehicles</a>
+          <a href="{% url 'manage-resource' 'access-rules' %}">Access rules</a>
+          <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
+        </nav>
+        <form action="{% url 'operator-logout' %}" method="post">{% csrf_token %}<button class="link-button">Sign out</button></form>
+      {% endif %}
+    </header>
+    <main class="page">
+      {% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
