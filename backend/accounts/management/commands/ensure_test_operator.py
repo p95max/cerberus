@@ -26,10 +26,14 @@ class Command(BaseCommand):
             username=username,
             defaults={"is_active": True},
         )
-        user.groups.add(Group.objects.get(name=ROLE_OPERATOR))
+        operator_group = Group.objects.get(name=ROLE_OPERATOR)
+        role_assigned = not user.groups.filter(pk=operator_group.pk).exists()
+        user.groups.add(operator_group)
         if created:
             user.set_password(password)
             user.save(update_fields=("password",))
             self.stdout.write(self.style.SUCCESS(f"Created test operator: {username}"))
         else:
             self.stdout.write(f"Test operator already exists: {username}")
+        if role_assigned:
+            self.stdout.write(self.style.SUCCESS(f"Assigned {ROLE_OPERATOR} role to: {username}"))
