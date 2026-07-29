@@ -5,6 +5,7 @@
     <a href="{% url 'manage-resource' 'sites' %}" {% if resource == 'sites' %}aria-current="page"{% endif %}>Parking sites</a>
     <a href="{% url 'manage-resource' 'gates' %}" {% if resource == 'gates' %}aria-current="page"{% endif %}>Gates</a>
     <a href="{% url 'manage-resource' 'cameras' %}" {% if resource == 'cameras' %}aria-current="page"{% endif %}>Cameras</a>
+    <a href="{% url 'manage-resource' 'vehicles' %}" {% if resource == 'vehicles' %}aria-current="page"{% endif %}>Vehicles</a>
     <a href="{% url 'manage-resource' 'access-lists' %}" {% if resource == 'access-lists' %}aria-current="page"{% endif %}>Access lists</a>
     <a href="{% url 'manage-resource' 'access-rules' %}" {% if resource == 'access-rules' %}aria-current="page"{% endif %}>Access rules</a>
   </nav>

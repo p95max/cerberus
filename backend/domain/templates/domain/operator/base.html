@@ -16,7 +16,6 @@
           <a href="{% url 'operator-dashboard' %}">Events</a>
           <a href="{% url 'manual-review-queue' %}">Manual review</a>
           {% if can_manage_configuration %}
-            <a href="{% url 'manage-resource' 'vehicles' %}">Vehicles</a>
             <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
           {% endif %}
         </nav>
