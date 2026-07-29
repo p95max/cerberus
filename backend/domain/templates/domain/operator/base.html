@@ -20,6 +20,7 @@
             <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
           {% endif %}
         </nav>
+        <span class="signed-in">Signed in as {{ user.username }} · {{ current_operator_role }}</span>
         <form action="{% url 'operator-logout' %}" method="post">{% csrf_token %}<button class="link-button">Sign out</button></form>
       {% endif %}
     </header>
