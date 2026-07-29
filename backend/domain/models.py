@@ -183,6 +183,14 @@ class AccessDecision(TimeStampedModel):
     decided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )
+    manual_review_closed_at = models.DateTimeField(blank=True, null=True)
+    manual_review_closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="closed_manual_review_cases",
+    )
 
     def __str__(self) -> str:
         return f"{self.event.normalized_plate}: {self.outcome}"

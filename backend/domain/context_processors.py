@@ -29,7 +29,10 @@ def operator_permissions(request: Any) -> dict[str, Any]:
         ),
         "current_operator_role": role,
         "manual_review_count": (
-            AccessDecision.objects.filter(outcome=AccessDecision.Outcome.MANUAL_REVIEW).count()
+            AccessDecision.objects.filter(
+                outcome=AccessDecision.Outcome.MANUAL_REVIEW,
+                manual_review_closed_at__isnull=True,
+            ).count()
             if request.user.is_authenticated
             else 0
         ),

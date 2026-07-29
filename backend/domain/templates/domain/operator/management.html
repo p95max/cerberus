@@ -1,6 +1,6 @@
 {% extends "domain/operator/base.html" %}
 {% block content %}
-  <div class="page-heading"><div><p class="eyebrow">Configuration</p><h1><span class="heading-icon" aria-hidden="true">⚙️</span>{{ title }}{% if not can_manage %} (read-only){% endif %}</h1></div></div>
+  <div class="page-heading"><div><p class="eyebrow">Configuration{% if not can_manage %} (read-only){% endif %}</p><h1><span class="heading-icon" aria-hidden="true">⚙️</span>{{ title }}</h1></div></div>
   <nav class="settings-tabs" aria-label="Configuration sections">
     <a href="{% url 'manage-resource' 'sites' %}" {% if resource == 'sites' %}aria-current="page"{% endif %}>Parking sites/Objects</a>
     <a href="{% url 'manage-resource' 'gates' %}" {% if resource == 'gates' %}aria-current="page"{% endif %}>Gates</a>

@@ -36,6 +36,9 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .clickable-row:hover { background: #161b22; }
 .clickable-row:focus { background: #161b22; outline: 2px solid #8ecbff; outline-offset: -2px; }
 .status { border-radius: 999px; display: inline-block; font-size: .8rem; font-weight: 700; padding: .25rem .55rem; }
+.case-status { border: 1px solid #484f58; border-radius: 999px; color: #c9d1d9; display: inline-block; font-size: .78rem; font-weight: 700; padding: .2rem .5rem; }
+.case-status.open { border-color: #d29922; color: #ffe58b; }
+.case-status.closed { border-color: #2ea043; color: #b7f7ca; }
 .allow { background: #1b5e3a; color: #b7f7ca; }
 .deny { background: #742d35; color: #ffc1c7; }
 .manual_review { background: #624d14; color: #ffe58b; }
@@ -58,6 +61,8 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 @keyframes barrier-pulse { 50% { opacity: .35; } }
 .barrier-timer strong { display: block; font-size: 1.35rem; margin-top: .3rem; }
 .barrier-timer p { color: #b7f7ca; margin: .4rem 0 0; }
+.case-actions { border-top: 1px solid #30363d; margin-top: 1.25rem; padding-top: 1.25rem; }
+.case-closed-note { color: #b7f7ca; margin: 0; }
 .management-grid.read-only { grid-template-columns: 1fr; }
 .settings-tabs { border-bottom: 1px solid #30363d; display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1.5rem; }
 .settings-tabs a { border-bottom: 2px solid transparent; color: #8ecbff; padding: .6rem .75rem; text-decoration: none; }
@@ -81,6 +86,8 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .audit-acknowledged .audit-icon { background: #1f6feb; color: #dbeafe; }
 .audit-closed { background: #30363d; border-left-color: #8b949e; }
 .audit-closed .audit-icon { background: #484f58; color: #e6edf3; }
+.audit-case-closed { background: #1b5e3a24; border-left-color: #3fb950; }
+.audit-case-closed .audit-icon { background: #1b5e3a; color: #b7f7ca; }
 .audit-failed { background: #742d3533; border-left-color: #f85149; }
 .audit-failed .audit-icon { background: #742d35; color: #ffc1c7; }
 .message { border-radius: .35rem; padding: .75rem; }

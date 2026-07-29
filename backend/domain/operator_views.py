@@ -125,6 +125,7 @@ class OperatorDashboardView(OperatorAccessMixin, View):
                 "sites": ParkingSite.objects.filter(is_active=True),
                 "gates": Gate.objects.filter(is_active=True).select_related("site"),
                 "outcomes": AccessDecision.Outcome.choices,
+                "show_case_status": title == "Manual review queue",
             },
         )
 
@@ -144,7 +145,7 @@ class EventDetailView(OperatorAccessMixin, DetailView):
 
     def get_queryset(self) -> QuerySet[RecognitionEvent]:
         return RecognitionEvent.objects.select_related(
-            "camera__gate__site", "decision__matched_rule"
+            "camera__gate__site", "decision__matched_rule", "decision__manual_review_closed_by"
         )
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -187,7 +188,25 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                 request, "Manual barrier commands are available only for manual-review events."
             )
             return redirect("operator-event-detail", pk=event.pk)
-        if request.POST.get("action") != "open":
+        action = request.POST.get("action")
+        if action == "close_case":
+            if event.decision.manual_review_closed_at is not None:
+                messages.error(request, "This manual-review case is already closed.")
+            else:
+                event.decision.manual_review_closed_at = timezone.now()
+                event.decision.manual_review_closed_by = request.user
+                event.decision.save(
+                    update_fields=("manual_review_closed_at", "manual_review_closed_by", "updated_at")
+                )
+                record_audit(
+                    "manual_review_case_closed",
+                    request=request,
+                    actor=request.user,
+                    details={"event_id": event.pk},
+                )
+                messages.success(request, "Manual-review case closed.")
+            return redirect("operator-event-detail", pk=event.pk)
+        if action != "open":
             messages.error(request, "Choose Open to queue a manual barrier command.")
             return redirect("operator-event-detail", pk=event.pk)
         active_command = event.decision.barrier_commands.filter(

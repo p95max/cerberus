@@ -70,7 +70,7 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert b"Manual review" in response.content
     assert b"Apply filters" in response.content
     assert b'aria-current="page">Events' in response.content
-    assert b"events awaiting manual review">1<" in response.content
+    assert b'events awaiting manual review">1<' in response.content
     assert response.context["events_count"] == 1
     assert response.context["events"].paginator.per_page == 20
 
@@ -123,6 +123,33 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     command = manual_review_event.decision.barrier_commands.get()
     assert command.auto_close_at is not None
     assert AuditLog.objects.filter(action="manual_barrier_command_requested").exists()
+
+
+@pytest.mark.django_db
+def test_operator_can_close_manual_review_case_with_audited_actor(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    client = Client()
+    client.force_login(operator)
+
+    response = client.post(
+        f"/operator/events/{manual_review_event.pk}/", {"action": "close_case"}
+    )
+
+    manual_review_event.decision.refresh_from_db()
+    assert response.status_code == 302
+    assert manual_review_event.decision.manual_review_closed_at is not None
+    assert manual_review_event.decision.manual_review_closed_by == operator
+    assert AuditLog.objects.filter(
+        action="manual_review_case_closed",
+        actor=operator,
+        details__event_id=manual_review_event.pk,
+    ).exists()
+
+    queue = client.get("/operator/manual-review/")
+    assert queue.status_code == 200
+    assert b"Case" in queue.content
+    assert b"Closed" in queue.content
 
 
 @pytest.mark.django_db
@@ -197,7 +224,7 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
     client.force_login(operator)
     response = client.get("/operator/manage/vehicles/")
     assert response.status_code == 200
-    assert b"Vehicles (read-only)" in response.content
+    assert b"Configuration (read-only)" in response.content
     assert b"Add Vehicle" not in response.content
     assert b">Edit<" not in response.content
     assert client.post("/operator/manage/vehicles/", {}).status_code == 403
