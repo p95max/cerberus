@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 from django.core.management import call_command
-from django.test import override_settings
+from django.test import Client, override_settings
 
 from accounts.models import User
-from accounts.roles import ROLE_OPERATOR, ensure_role_groups
+from accounts.roles import ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
 from domain.models import AccessDecision, Camera, Gate, ParkingSite, RecognitionEvent, Vehicle
 
 
@@ -13,6 +13,8 @@ from domain.models import AccessDecision, Camera, Gate, ParkingSite, Recognition
 @override_settings(DEBUG=True)
 def test_ensure_test_operator_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CREATE_TEST_OPERATOR", "true")
+    monkeypatch.setenv("CREATE_TEST_MANAGER", "false")
+    monkeypatch.setenv("CREATE_TEST_ADMIN", "false")
     monkeypatch.setenv("TEST_OPERATOR_USERNAME", "test-operator")
     monkeypatch.setenv("TEST_OPERATOR_PASSWORD", "test-password")
 
@@ -33,6 +35,8 @@ def test_ensure_test_operator_assigns_role_to_existing_user(
     ensure_role_groups()
     User.objects.create_user(username="existing-operator", password="password")
     monkeypatch.setenv("CREATE_TEST_OPERATOR", "true")
+    monkeypatch.setenv("CREATE_TEST_MANAGER", "false")
+    monkeypatch.setenv("CREATE_TEST_ADMIN", "false")
     monkeypatch.setenv("TEST_OPERATOR_USERNAME", "existing-operator")
 
     call_command("ensure_test_operator")
@@ -45,6 +49,7 @@ def test_ensure_test_operator_assigns_role_to_existing_user(
 @override_settings(DEBUG=True)
 def test_ensure_test_operator_creates_administrator(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CREATE_TEST_OPERATOR", "false")
+    monkeypatch.setenv("CREATE_TEST_MANAGER", "false")
     monkeypatch.setenv("CREATE_TEST_ADMIN", "true")
     monkeypatch.setenv("TEST_ADMIN_USERNAME", "test-admin")
     monkeypatch.setenv("TEST_ADMIN_PASSWORD", "test-admin-password")
@@ -54,6 +59,27 @@ def test_ensure_test_operator_creates_administrator(monkeypatch: pytest.MonkeyPa
     user = User.objects.get(username="test-admin")
     assert user.check_password("test-admin-password")
     assert user.groups.filter(name="Administrator").exists()
+    assert user.is_staff
+    assert user.is_superuser
+    client = Client()
+    client.force_login(user)
+    assert client.get("/admin/").status_code == 200
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_ensure_test_operator_creates_manager(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CREATE_TEST_OPERATOR", "false")
+    monkeypatch.setenv("CREATE_TEST_MANAGER", "true")
+    monkeypatch.setenv("CREATE_TEST_ADMIN", "false")
+    monkeypatch.setenv("TEST_MANAGER_USERNAME", "test-manager")
+    monkeypatch.setenv("TEST_MANAGER_PASSWORD", "test-manager-password")
+
+    call_command("ensure_test_operator")
+
+    user = User.objects.get(username="test-manager")
+    assert user.check_password("test-manager-password")
+    assert user.groups.filter(name=ROLE_MANAGER).exists()
 
 
 @pytest.mark.django_db
@@ -62,6 +88,7 @@ def test_ensure_test_operator_creates_idempotent_demo_data(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("CREATE_TEST_OPERATOR", "false")
+    monkeypatch.setenv("CREATE_TEST_MANAGER", "false")
     monkeypatch.setenv("CREATE_TEST_ADMIN", "false")
     monkeypatch.setenv("CREATE_DEMO_DATA", "true")
 

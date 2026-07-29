@@ -10,7 +10,12 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from accounts.models import User
-from accounts.roles import ROLE_ADMINISTRATOR, ROLE_OPERATOR, ensure_role_groups
+from accounts.roles import (
+    ROLE_ADMINISTRATOR,
+    ROLE_MANAGER,
+    ROLE_OPERATOR,
+    ensure_role_groups,
+)
 from domain.models import (
     AccessList,
     AccessRule,
@@ -32,9 +37,16 @@ class Command(BaseCommand):
             "true",
             "yes",
         }
+        manager_enabled = os.getenv("CREATE_TEST_MANAGER", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
         admin_enabled = os.getenv("CREATE_TEST_ADMIN", "false").lower() in {"1", "true", "yes"}
         demo_enabled = os.getenv("CREATE_DEMO_DATA", "false").lower() in {"1", "true", "yes"}
-        if not settings.DEBUG or not (operator_enabled or admin_enabled or demo_enabled):
+        if not settings.DEBUG or not (
+            operator_enabled or manager_enabled or admin_enabled or demo_enabled
+        ):
             self.stdout.write("Test user creation skipped.")
             return
 
@@ -46,21 +58,45 @@ class Command(BaseCommand):
                 role=ROLE_OPERATOR,
                 label="operator",
             )
+        if manager_enabled:
+            self.ensure_user(
+                username=os.getenv("TEST_MANAGER_USERNAME", "manager"),
+                password=os.getenv("TEST_MANAGER_PASSWORD", "manager-demo-password"),
+                role=ROLE_MANAGER,
+                label="manager",
+            )
         if admin_enabled:
             self.ensure_user(
                 username=os.getenv("TEST_ADMIN_USERNAME", "admin"),
                 password=os.getenv("TEST_ADMIN_PASSWORD", "admin-demo-password"),
                 role=ROLE_ADMINISTRATOR,
                 label="administrator",
+                django_superuser=True,
             )
         if demo_enabled:
             self.seed_demo_data()
 
-    def ensure_user(self, *, username: str, password: str, role: str, label: str) -> None:
+    def ensure_user(
+        self,
+        *,
+        username: str,
+        password: str,
+        role: str,
+        label: str,
+        django_superuser: bool = False,
+    ) -> None:
         user, created = User.objects.get_or_create(
             username=username,
-            defaults={"is_active": True},
+            defaults={
+                "is_active": True,
+                "is_staff": django_superuser,
+                "is_superuser": django_superuser,
+            },
         )
+        if django_superuser and not (user.is_staff and user.is_superuser):
+            user.is_staff = True
+            user.is_superuser = True
+            user.save(update_fields=("is_staff", "is_superuser"))
         role_group = Group.objects.get(name=role)
         role_assigned = not user.groups.filter(pk=role_group.pk).exists()
         user.groups.add(role_group)

@@ -9,7 +9,7 @@ from django.test import Client, override_settings
 from django.utils import timezone
 
 from accounts.models import AuditLog, User
-from accounts.roles import ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
+from accounts.roles import ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
 from domain.models import (
     AccessDecision,
     BarrierCommand,
@@ -34,6 +34,14 @@ def manager() -> User:
     ensure_role_groups()
     user = User.objects.create_user(username="manager-ui", password="password")
     user.groups.add(Group.objects.get(name=ROLE_MANAGER))
+    return user
+
+
+@pytest.fixture
+def administrator() -> User:
+    ensure_role_groups()
+    user = User.objects.create_user(username="admin-ui", password="password")
+    user.groups.add(Group.objects.get(name=ROLE_ADMINISTRATOR))
     return user
 
 
@@ -347,7 +355,7 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
 
 
 @pytest.mark.django_db
-def test_activity_log_is_filterable_and_sortable_for_operators_and_managers(
+def test_activity_log_is_filterable_and_sortable_for_managers(
     operator: User, manager: User
 ) -> None:
     AuditLog.objects.create(action="manual_review_case_closed", actor=manager)
@@ -355,7 +363,7 @@ def test_activity_log_is_filterable_and_sortable_for_operators_and_managers(
     client = Client()
 
     client.force_login(operator)
-    assert client.get("/operator/activity-log/").status_code == 200
+    assert client.get("/operator/activity-log/").status_code == 403
 
     client.force_login(manager)
     response = client.get(
@@ -367,6 +375,25 @@ def test_activity_log_is_filterable_and_sortable_for_operators_and_managers(
     assert b"Manual-review case closed" in response.content
     assert b"Sign-in failed" not in response.content
     assert response.context["entries_count"] == 1
+
+
+@pytest.mark.django_db
+def test_only_administrator_can_download_activity_log_json(
+    manager: User, administrator: User
+) -> None:
+    AuditLog.objects.create(action="login_succeeded", actor=administrator)
+    client = Client()
+
+    client.force_login(manager)
+    assert client.get("/operator/activity-log/export/").status_code == 403
+
+    client.force_login(administrator)
+    page = client.get("/operator/activity-log/")
+    export = client.get("/operator/activity-log/export/", {"action": "login_succeeded"})
+    assert b"Download JSON" in page.content
+    assert export.status_code == 200
+    assert export["Content-Type"].startswith("application/json")
+    assert export.json()[0]["action"] == "login_succeeded"
 
 
 @pytest.mark.django_db

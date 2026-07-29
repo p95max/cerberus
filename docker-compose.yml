@@ -40,6 +40,7 @@ services:
       CERBERUS_ENV: development
       DJANGO_SETTINGS_MODULE: config.settings.development
       DJANGO_SECRET_KEY: change-me-for-local-development
+      DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}
       DATABASE_URL: postgresql://${POSTGRES_USER:-cerberus}:${POSTGRES_PASSWORD:-change-me-for-local-development}@postgres:5432/${POSTGRES_DB:-cerberus}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
@@ -47,6 +48,9 @@ services:
       CREATE_TEST_OPERATOR: ${CREATE_TEST_OPERATOR:-true}
       TEST_OPERATOR_USERNAME: ${TEST_OPERATOR_USERNAME:-operator}
       TEST_OPERATOR_PASSWORD: ${TEST_OPERATOR_PASSWORD:-operator-demo-password}
+      CREATE_TEST_MANAGER: ${CREATE_TEST_MANAGER:-true}
+      TEST_MANAGER_USERNAME: ${TEST_MANAGER_USERNAME:-manager}
+      TEST_MANAGER_PASSWORD: ${TEST_MANAGER_PASSWORD:-manager-demo-password}
       CREATE_TEST_ADMIN: ${CREATE_TEST_ADMIN:-true}
       TEST_ADMIN_USERNAME: ${TEST_ADMIN_USERNAME:-admin}
       TEST_ADMIN_PASSWORD: ${TEST_ADMIN_PASSWORD:-admin-demo-password}

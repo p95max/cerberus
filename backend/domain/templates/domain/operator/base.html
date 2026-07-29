@@ -21,7 +21,7 @@
           {% endif %}
         </nav>
         {% if persistent_open_barriers %}<details class="persistent-barrier-menu"><summary aria-label="{{ persistent_open_barriers|length }} barriers are open without a timer">!</summary><div><strong>Barrier open without a timer</strong><ul>{% for command in persistent_open_barriers %}<li>{{ command.gate.site.name }} · {{ command.gate.name }}</li>{% endfor %}</ul><a href="{% url 'operator-barrier-control' %}">Review and close</a></div></details>{% endif %}
-        {% if can_view_configuration %}<a class="utility-link{% if request.resolver_match.url_name == 'operator-activity-log' %} active{% endif %}" href="{% url 'operator-activity-log' %}">Activity log</a>{% endif %}
+        {% if can_view_activity_log %}<a class="utility-link{% if request.resolver_match.url_name == 'operator-activity-log' %} active{% endif %}" href="{% url 'operator-activity-log' %}">Activity log</a>{% endif %}
         <span class="signed-in">Signed in as {{ user.username }} · {{ current_operator_role }}</span>
         <form action="{% url 'operator-logout' %}" method="post">{% csrf_token %}<button class="link-button">Sign out</button></form>
       {% endif %}

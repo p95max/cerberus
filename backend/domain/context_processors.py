@@ -41,6 +41,10 @@ def operator_permissions(request: Any) -> dict[str, Any]:
             request.user,
             (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ROLE_READ_ONLY),
         ),
+        "can_view_activity_log": has_role(
+            request.user,
+            (ROLE_ADMINISTRATOR, ROLE_MANAGER),
+        ),
         "can_control_barrier": has_role(
             request.user,
             (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR),

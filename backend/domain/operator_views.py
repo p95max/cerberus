@@ -9,7 +9,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import QuerySet
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
+from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
@@ -207,6 +207,7 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
                     "gate_id": command.gate_id,
                     "gate_name": str(command.gate),
                     "request_reference": command.request_reference,
+                    "opening_mode": "indefinite" if command.auto_close_at is None else "timed",
                 },
             )
             messages.success(request, f"Barrier command #{command.pk} closed.")
@@ -438,7 +439,7 @@ class ManagerAccessMixin(OperatorAccessMixin):
     allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER)
 
 
-class ActivityLogView(OperatorAccessMixin, View):
+class ActivityLogView(ManagerAccessMixin, View):
     template_name = "domain/operator/activity_log.html"
     action_labels = {
         "barrier_closed_automatically": "Barrier closed automatically",
@@ -465,7 +466,7 @@ class ActivityLogView(OperatorAccessMixin, View):
         "actor": "actor__username",
     }
 
-    def get(self, request: HttpRequest) -> HttpResponse:
+    def filtered_entries(self, request: HttpRequest) -> tuple[QuerySet[AuditLog], str]:
         entries = AuditLog.objects.select_related("actor")
         if action := request.GET.get("action"):
             entries = entries.filter(action=action)
@@ -477,10 +478,20 @@ class ActivityLogView(OperatorAccessMixin, View):
         if sort not in self.sort_options:
             sort = "newest"
         entries = entries.order_by(self.sort_options[sort], "-pk")
-        paginator = Paginator(entries, 25)
+        return entries, sort
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        entries, sort = self.filtered_entries(request)
+        paginator = Paginator(entries, 20)
         page_obj = paginator.get_page(request.GET.get("page"))
+        command_ids = [
+            entry.details.get("command_id")
+            for entry in page_obj
+            if entry.details and entry.details.get("command_id")
+        ]
+        commands = BarrierCommand.objects.in_bulk(command_ids)
         for entry in page_obj:
-            self.decorate_entry(entry)
+            self.decorate_entry(entry, commands.get((entry.details or {}).get("command_id")))
         query_params = request.GET.copy()
         query_params.pop("page", None)
         return render(
@@ -498,10 +509,11 @@ class ActivityLogView(OperatorAccessMixin, View):
                 "actors": User.objects.filter(audit_events__isnull=False).order_by("username").distinct(),
                 "sort": sort,
                 "query_string": query_params.urlencode(),
+                "can_export_audit_log": has_role(request.user, (ROLE_ADMINISTRATOR,)),
             },
         )
 
-    def decorate_entry(self, entry: AuditLog) -> None:
+    def decorate_entry(self, entry: AuditLog, command: BarrierCommand | None = None) -> None:
         details = entry.details or {}
         entry.action_label = self.action_labels.get(
             entry.action, entry.action.replace("_", " ").capitalize()
@@ -515,11 +527,25 @@ class ActivityLogView(OperatorAccessMixin, View):
         )
         entry.event_id = details.get("event_id")
         entry.command_id = details.get("command_id")
-        entry.is_indefinite_opening = details.get("opening_mode") == "indefinite"
+        entry.is_indefinite_opening = (
+            details.get("opening_mode") == "indefinite"
+            or (
+                entry.action == "barrier_closed_manually"
+                and command is not None
+                and command.auto_close_at is None
+            )
+        )
         entry.is_event_linked_opening = (
             entry.action == "manual_barrier_command_requested" and bool(entry.event_id)
         )
-        entry.is_independent_opening = entry.action == "emergency_barrier_command_requested"
+        entry.is_independent_opening = (
+            entry.action == "emergency_barrier_command_requested"
+            or (
+                entry.action == "barrier_closed_manually"
+                and command is not None
+                and command.decision_id is None
+            )
+        )
         detail_labels = {
             "auto_close_at": "Auto-close",
             "auto_close_seconds": "Close after",
@@ -545,6 +571,32 @@ class ActivityLogView(OperatorAccessMixin, View):
                 except (TypeError, ValueError):
                     pass
             entry.detail_lines.append(f"{detail_labels[key]}: {value}")
+
+
+class ActivityLogExportView(ActivityLogView):
+    allowed_roles = (ROLE_ADMINISTRATOR,)
+
+    def get(self, request: HttpRequest) -> JsonResponse:
+        entries, _ = self.filtered_entries(request)
+        response = JsonResponse(
+            [
+                {
+                    "id": entry.pk,
+                    "time": entry.created_at.isoformat(),
+                    "action": entry.action,
+                    "actor": entry.actor.username if entry.actor else None,
+                    "ip_address": entry.ip_address,
+                    "details": entry.details,
+                }
+                for entry in entries
+            ],
+            safe=False,
+            json_dumps_params={"ensure_ascii": False, "indent": 2},
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="cerberus-activity-log-{timezone.localdate():%Y-%m-%d}.json"'
+        )
+        return response
 
 
 class BarrierCommandDetailView(OperatorAccessMixin, DetailView):

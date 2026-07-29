@@ -29,6 +29,10 @@ def env_bool(name: str, default: str) -> bool:
 CERBERUS_ENV = env("CERBERUS_ENV", "development")
 CERBERUS_VERSION = env("CERBERUS_VERSION", "0.1.0")
 SECRET_KEY = env("DJANGO_SECRET_KEY", "unsafe-development-secret-key")
+DJANGO_ADMIN_URL = env("DJANGO_ADMIN_URL", "admin").strip("/")
+if not DJANGO_ADMIN_URL:
+    raise RuntimeError("DJANGO_ADMIN_URL must contain a non-root path.")
+DJANGO_ADMIN_URL = f"{DJANGO_ADMIN_URL}/"
 DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 

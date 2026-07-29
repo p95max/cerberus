@@ -49,14 +49,19 @@ The users and demo data are development-only and can be configured in `.env`:
 ```dotenv
 CREATE_DEMO_DATA=true
 CREATE_TEST_OPERATOR=true
+CREATE_TEST_MANAGER=true
 CREATE_TEST_ADMIN=true
 TEST_OPERATOR_USERNAME=operator
 TEST_OPERATOR_PASSWORD=operator-demo-password
+TEST_MANAGER_USERNAME=manager
+TEST_MANAGER_PASSWORD=manager-demo-password
 TEST_ADMIN_USERNAME=admin
 TEST_ADMIN_PASSWORD=admin-demo-password
 ```
 
 Change the passwords before exposing any environment beyond local development.
+`TEST_ADMIN_*` creates a Django superuser too. Its Django Admin path is configured by
+`DJANGO_ADMIN_URL` (default: `admin/`).
 
 ## Recognition-data retention
 

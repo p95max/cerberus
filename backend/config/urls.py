@@ -1,3 +1,5 @@
+from django.contrib import admin
+from django.conf import settings
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -11,6 +13,7 @@ from accounts.views import (
 from config.views import health, readiness, version
 from domain.operator_views import (
     ActivityLogView,
+    ActivityLogExportView,
     BarrierCommandDetailView,
     BarrierControlQueueView,
     EventDetailView,
@@ -24,6 +27,7 @@ from domain.operator_views import (
 from domain.views import RecognitionEventAPIView
 
 urlpatterns = [
+    path(settings.DJANGO_ADMIN_URL, admin.site.urls),
     path("healthz", health, name="health"),
     path("readyz", readiness, name="readiness"),
     path("version", version, name="version"),
@@ -46,6 +50,7 @@ urlpatterns = [
     path("operator/barrier-control/", BarrierControlQueueView.as_view(), name="operator-barrier-control"),
     path("operator/barrier-commands/<int:pk>/", BarrierCommandDetailView.as_view(), name="operator-barrier-command-detail"),
     path("operator/activity-log/", ActivityLogView.as_view(), name="operator-activity-log"),
+    path("operator/activity-log/export/", ActivityLogExportView.as_view(), name="operator-activity-log-export"),
     path("operator/events/<int:pk>/", EventDetailView.as_view(), name="operator-event-detail"),
     path(
         "operator/manage/<str:resource>/",
