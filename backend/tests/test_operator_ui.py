@@ -63,6 +63,37 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert b"Apply filters" in response.content
     assert b'aria-current="page">Events' in response.content
     assert b"events awaiting manual review">1<" in response.content
+    assert response.context["events_count"] == 1
+    assert response.context["events"].paginator.per_page == 20
+
+
+@pytest.mark.django_db
+def test_operator_dashboard_paginates_events(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    for index in range(20):
+        event = RecognitionEvent.objects.create(
+            camera=manual_review_event.camera,
+            normalized_plate=f"PAGE{index:02d}",
+            confidence=Decimal("0.9000"),
+            captured_at=timezone.now(),
+        )
+        AccessDecision.objects.create(
+            event=event,
+            outcome=AccessDecision.Outcome.ALLOW,
+            reason="Test decision.",
+        )
+
+    client = Client()
+    client.force_login(operator)
+    response = client.get("/operator/", {"page": 2})
+
+    assert response.status_code == 200
+    assert response.context["events_count"] == 21
+    assert response.context["events"].number == 2
+    assert len(response.context["events"].object_list) == 1
+    assert b"21 events found" in response.content
+    assert b"Page 2 of 2" in response.content
 
 
 @pytest.mark.django_db
@@ -85,12 +116,17 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
 
 
 @pytest.mark.django_db
-def test_management_pages_require_manager_role(
+def test_operator_can_view_configuration_but_only_manager_can_change_it(
     operator: User, manager: User, manual_review_event: RecognitionEvent
 ) -> None:
     client = Client()
     client.force_login(operator)
-    assert client.get("/operator/manage/vehicles/").status_code == 403
+    response = client.get("/operator/manage/vehicles/")
+    assert response.status_code == 200
+    assert b"Records (read-only)" in response.content
+    assert b"Add Vehicle" not in response.content
+    assert b">Edit<" not in response.content
+    assert client.post("/operator/manage/vehicles/", {}).status_code == 403
 
     client.force_login(manager)
     response = client.get("/operator/manage/vehicles/")

@@ -26,6 +26,8 @@ input, select { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; 
 button, .button { background: #238636; border: 1px solid #2ea043; color: white; cursor: pointer; text-decoration: none; }
 .secondary { background: #21262d; border-color: #30363d; padding: .55rem .65rem; }
 .table-wrap { border: 1px solid #30363d; border-radius: .5rem; overflow-x: auto; }
+.results-count { color: #8b949e; margin: 0 0 .75rem; }
+.pagination { align-items: center; display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; }
 table { border-collapse: collapse; min-width: 720px; width: 100%; }
 th, td { border-bottom: 1px solid #30363d; padding: .8rem; text-align: left; }
 th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
@@ -37,6 +39,7 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .deny { background: #742d35; color: #ffc1c7; }
 .manual_review { background: #624d14; color: #ffe58b; }
 .detail-grid, .management-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.management-grid.read-only { grid-template-columns: 1fr; }
 .settings-tabs { border-bottom: 1px solid #30363d; display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1.5rem; }
 .settings-tabs a { border-bottom: 2px solid transparent; color: #8ecbff; padding: .6rem .75rem; text-decoration: none; }
 .settings-tabs a[aria-current="page"] { border-bottom-color: #f2cc60; color: #f2cc60; font-weight: 700; }

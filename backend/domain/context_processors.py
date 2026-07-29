@@ -23,6 +23,10 @@ def operator_permissions(request: Any) -> dict[str, Any]:
             request.user,
             (ROLE_ADMINISTRATOR, ROLE_MANAGER),
         ),
+        "can_view_configuration": has_role(
+            request.user,
+            (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ROLE_READ_ONLY),
+        ),
         "current_operator_role": role,
         "manual_review_count": (
             AccessDecision.objects.filter(outcome=AccessDecision.Outcome.MANUAL_REVIEW).count()

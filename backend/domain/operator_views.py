@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core.paginator import Paginator
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -89,18 +90,22 @@ class OperatorDashboardView(OperatorAccessMixin, View):
     template_name = "domain/operator/dashboard.html"
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        return self.render_events(
-            request, filtered_events(request)[:100], "Recent recognition events"
-        )
+        return self.render_events(request, filtered_events(request), "Recent recognition events")
 
     def render_events(
         self, request: HttpRequest, events: QuerySet[RecognitionEvent], title: str
     ) -> HttpResponse:
+        paginator = Paginator(events, 20)
+        page_obj = paginator.get_page(request.GET.get("page"))
+        query_params = request.GET.copy()
+        query_params.pop("page", None)
         return render(
             request,
             self.template_name,
             {
-                "events": events,
+                "events": page_obj,
+                "events_count": paginator.count,
+                "query_string": query_params.urlencode(),
                 "title": title,
                 "sites": ParkingSite.objects.filter(is_active=True),
                 "gates": Gate.objects.filter(is_active=True).select_related("site"),
@@ -114,7 +119,7 @@ class ManualReviewQueueView(OperatorDashboardView):
         events = filtered_events(request).filter(
             decision__outcome=AccessDecision.Outcome.MANUAL_REVIEW
         )
-        return self.render_events(request, events[:100], "Manual review queue")
+        return self.render_events(request, events, "Manual review queue")
 
 
 class EventDetailView(OperatorAccessMixin, DetailView):
@@ -173,20 +178,27 @@ class ManagerAccessMixin(OperatorAccessMixin):
     allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER)
 
 
-class ResourceManagementView(ManagerAccessMixin, View):
+class ResourceManagementView(OperatorAccessMixin, View):
     template_name = "domain/operator/management.html"
 
     def get_config(self, resource: str) -> tuple[type[Any], type[Any], str] | None:
         return RESOURCE_CONFIG.get(resource)
+
+    @staticmethod
+    def can_manage(request: HttpRequest) -> bool:
+        return has_role(request.user, (ROLE_ADMINISTRATOR, ROLE_MANAGER))
 
     def get(self, request: HttpRequest, resource: str) -> HttpResponse:
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
         model, form_class, title = config
-        return self.render_form(request, model.objects.all(), form_class(), title)
+        form = form_class() if self.can_manage(request) else None
+        return self.render_form(request, model.objects.all(), form, title)
 
     def post(self, request: HttpRequest, resource: str) -> HttpResponse:
+        if not self.can_manage(request):
+            return HttpResponseForbidden("Manager role is required to change configuration.")
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
@@ -199,12 +211,18 @@ class ResourceManagementView(ManagerAccessMixin, View):
         return self.render_form(request, model.objects.all(), form, title)
 
     def render_form(
-        self, request: HttpRequest, items: QuerySet[Any], form: Any, title: str
+        self, request: HttpRequest, items: QuerySet[Any], form: Any | None, title: str
     ) -> HttpResponse:
         return render(
             request,
             self.template_name,
-            {"items": items, "form": form, "title": title, "resource": self.kwargs["resource"]},
+            {
+                "items": items,
+                "form": form,
+                "title": title,
+                "resource": self.kwargs["resource"],
+                "can_manage": self.can_manage(request),
+            },
         )
 
 
