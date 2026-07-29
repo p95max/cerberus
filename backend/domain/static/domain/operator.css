@@ -33,6 +33,8 @@ table { border-collapse: collapse; min-width: 720px; width: 100%; }
 th, td { border-bottom: 1px solid #30363d; padding: .8rem; text-align: left; }
 th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .clickable-row { cursor: pointer; }
+.case-closed-row { color: #8b949e; }
+.case-closed-row .status { opacity: .7; }
 .clickable-row:hover { background: #161b22; }
 .clickable-row:focus { background: #161b22; outline: 2px solid #8ecbff; outline-offset: -2px; }
 .status { border-radius: 999px; display: inline-block; font-size: .8rem; font-weight: 700; padding: .25rem .55rem; }
