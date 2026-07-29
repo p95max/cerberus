@@ -16,7 +16,7 @@ from django.views import View
 from django.views.generic import DetailView
 
 from accounts.audit import record_audit
-from accounts.models import AuditLog
+from accounts.models import AuditLog, User
 from accounts.roles import ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ROLE_READ_ONLY, has_role
 from domain.forms import (
     AccessListForm,
@@ -24,6 +24,7 @@ from domain.forms import (
     BarrierControlSettingsForm,
     CameraForm,
     GateForm,
+    ManualBarrierOpenForm,
     ParkingSiteForm,
     RecognitionRetentionPolicyForm,
     VehicleForm,
@@ -161,6 +162,7 @@ class EventDetailView(OperatorAccessMixin, DetailView):
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
+        context.setdefault("manual_open_form", ManualBarrierOpenForm())
         context["audit_history"] = AuditLog.objects.filter(details__event_id=self.object.pk)
         latest_barrier_command = self.object.decision.barrier_commands.order_by("-created_at").first()
         context["active_barrier_command"] = (
@@ -223,6 +225,12 @@ class EventDetailView(OperatorAccessMixin, DetailView):
         if action != "open":
             messages.error(request, "Choose Open to queue a manual barrier command.")
             return redirect("operator-event-detail", pk=event.pk)
+        manual_open_form = ManualBarrierOpenForm(request.POST)
+        if not manual_open_form.is_valid():
+            self.object = event
+            return self.render_to_response(
+                self.get_context_data(manual_open_form=manual_open_form), status=400
+            )
         active_command = event.decision.barrier_commands.filter(
             status__in=(
                 BarrierCommand.Status.PENDING,
@@ -241,11 +249,15 @@ class EventDetailView(OperatorAccessMixin, DetailView):
             )
             return redirect("operator-event-detail", pk=event.pk)
         auto_close_at = timezone.now() + timedelta(seconds=barrier_auto_close_seconds())
+        manual_reason = manual_open_form.cleaned_data["reason"]
+        manual_comment = manual_open_form.cleaned_data["comment"]
         command = BarrierCommand.objects.create(
             decision=event.decision,
             gate=event.camera.gate,
             requested_by=request.user,
             auto_close_at=auto_close_at,
+            manual_reason=manual_reason,
+            manual_comment=manual_comment,
         )
         record_audit(
             "manual_barrier_command_requested",
@@ -255,6 +267,9 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                 "event_id": event.pk,
                 "command_id": command.pk,
                 "auto_close_at": auto_close_at.isoformat(),
+                "manual_reason": manual_reason,
+                "manual_reason_label": dict(ManualBarrierOpenForm.REASON_CHOICES)[manual_reason],
+                "manual_comment": manual_comment,
             },
         )
         transaction.on_commit(lambda: dispatch_barrier_command.delay(command.pk))
@@ -294,6 +309,45 @@ SINGLETON_RESOURCE_DEFAULTS = {
 
 class ManagerAccessMixin(OperatorAccessMixin):
     allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER)
+
+
+class ActivityLogView(OperatorAccessMixin, View):
+    template_name = "domain/operator/activity_log.html"
+    sort_options = {
+        "newest": "-created_at",
+        "oldest": "created_at",
+        "action": "action",
+        "actor": "actor__username",
+    }
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        entries = AuditLog.objects.select_related("actor")
+        if action := request.GET.get("action"):
+            entries = entries.filter(action=action)
+        if actor_id := request.GET.get("actor"):
+            if actor_id.isdigit():
+                entries = entries.filter(actor_id=int(actor_id))
+
+        sort = request.GET.get("sort", "newest")
+        if sort not in self.sort_options:
+            sort = "newest"
+        entries = entries.order_by(self.sort_options[sort], "-pk")
+        paginator = Paginator(entries, 25)
+        page_obj = paginator.get_page(request.GET.get("page"))
+        query_params = request.GET.copy()
+        query_params.pop("page", None)
+        return render(
+            request,
+            self.template_name,
+            {
+                "entries": page_obj,
+                "entries_count": paginator.count,
+                "actions": AuditLog.objects.order_by("action").values_list("action", flat=True).distinct(),
+                "actors": User.objects.filter(audit_events__isnull=False).order_by("username").distinct(),
+                "sort": sort,
+                "query_string": query_params.urlencode(),
+            },
+        )
 
 
 class ResourceManagementView(OperatorAccessMixin, View):

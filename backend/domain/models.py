@@ -216,6 +216,8 @@ class BarrierCommand(TimeStampedModel):
     attempt_count = models.PositiveSmallIntegerField(default=0)
     retry_after = models.DateTimeField(blank=True, null=True)
     last_error = models.CharField(max_length=255, blank=True)
+    manual_reason = models.CharField(max_length=64, blank=True)
+    manual_comment = models.CharField(max_length=500, blank=True)
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )

@@ -112,7 +112,10 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     client.force_login(operator)
     detail = client.get(f"/operator/events/{manual_review_event.pk}/")
     rejected = client.post(f"/operator/events/{manual_review_event.pk}/", {"action": "close"})
-    accepted = client.post(f"/operator/events/{manual_review_event.pk}/", {"action": "open"})
+    accepted = client.post(
+        f"/operator/events/{manual_review_event.pk}/",
+        {"action": "open", "reason": "verified_visitor", "comment": "Checked at the gate."},
+    )
 
     assert detail.status_code == 200
     assert b"No matching access rule." in detail.content
@@ -122,7 +125,12 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     assert manual_review_event.decision.barrier_commands.count() == 1
     command = manual_review_event.decision.barrier_commands.get()
     assert command.auto_close_at is not None
-    assert AuditLog.objects.filter(action="manual_barrier_command_requested").exists()
+    assert command.manual_reason == "verified_visitor"
+    assert command.manual_comment == "Checked at the gate."
+    assert AuditLog.objects.filter(
+        action="manual_barrier_command_requested",
+        details__manual_reason="verified_visitor",
+    ).exists()
 
 
 @pytest.mark.django_db
@@ -248,6 +256,29 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
     response = client.get("/operator/manage/vehicles/")
     assert response.status_code == 200
     assert b"Vehicles" in response.content
+
+
+@pytest.mark.django_db
+def test_activity_log_is_filterable_and_sortable_for_operators_and_managers(
+    operator: User, manager: User
+) -> None:
+    AuditLog.objects.create(action="manual_review_case_closed", actor=manager)
+    AuditLog.objects.create(action="login_failed")
+    client = Client()
+
+    client.force_login(operator)
+    assert client.get("/operator/activity-log/").status_code == 200
+
+    client.force_login(manager)
+    response = client.get(
+        "/operator/activity-log/",
+        {"action": "manual_review_case_closed", "actor": manager.pk, "sort": "oldest"},
+    )
+    assert response.status_code == 200
+    assert b"Activity log" in response.content
+    assert b"manual_review_case_closed" in response.content
+    assert b"login_failed" not in response.content
+    assert response.context["entries_count"] == 1
 
 
 @pytest.mark.django_db

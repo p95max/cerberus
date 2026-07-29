@@ -14,6 +14,24 @@ from domain.models import (
 )
 
 
+class ManualBarrierOpenForm(forms.Form):
+    REASON_CHOICES = (
+        ("vip_person", "VIP person"),
+        ("emergency_services", "Emergency services (ambulance, fire, police)"),
+        ("fire_evacuation", "Fire or evacuation"),
+        ("verified_visitor", "Verified visitor"),
+        ("recognition_error", "Recognition error"),
+        ("other", "Other"),
+    )
+
+    reason = forms.ChoiceField(choices=REASON_CHOICES)
+    comment = forms.CharField(
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Optional details"}),
+    )
+
+
 class ParkingSiteForm(forms.ModelForm):
     class Meta:
         model = ParkingSite
