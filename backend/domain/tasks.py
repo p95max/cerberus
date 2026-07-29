@@ -20,13 +20,26 @@ AGGREGATE_RETENTION_AUDIT_ACTIONS = (
 )
 
 
+def barrier_command_audit_details(command: BarrierCommand) -> dict[str, Any]:
+    details: dict[str, Any] = {
+        "command_id": command.pk,
+        "gate_id": command.gate_id,
+        "gate_name": str(command.gate),
+    }
+    if command.decision_id:
+        details["event_id"] = command.decision.event_id
+    if command.request_reference:
+        details["request_reference"] = command.request_reference
+    return details
+
+
 @shared_task
 def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
     """Send one command to the controller and schedule bounded retries on failure."""
     with transaction.atomic():
         command = (
             BarrierCommand.objects.select_for_update()
-            .select_related("decision")
+            .select_related("decision", "gate")
             .get(pk=command_id)
         )
         if command.status not in {BarrierCommand.Status.PENDING, BarrierCommand.Status.SENT}:
@@ -54,7 +67,7 @@ def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
                 )
                 AuditLog.objects.create(
                     action="barrier_command_retry_scheduled",
-                    details={"event_id": command.decision.event_id, "command_id": command.pk},
+                    details=barrier_command_audit_details(command),
                 )
                 if not settings.CELERY_TASK_ALWAYS_EAGER:
                     dispatch_barrier_command.apply_async(
@@ -68,7 +81,7 @@ def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
             command.save(update_fields=("status", "retry_after", "last_error", "updated_at"))
             AuditLog.objects.create(
                 action="barrier_command_failed",
-                details={"event_id": command.decision.event_id, "command_id": command.pk},
+                details=barrier_command_audit_details(command),
             )
             return {"command_id": command.pk, "status": command.status}
 
@@ -79,7 +92,7 @@ def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
         command.save(update_fields=("status", "last_error", "updated_at"))
         AuditLog.objects.create(
             action="barrier_command_acknowledged",
-            details={"event_id": command.decision.event_id, "command_id": command.pk},
+            details=barrier_command_audit_details(command),
         )
         close_barrier_after_delay.apply_async(args=[command.pk], eta=command.auto_close_at)
     return {"command_id": command.pk, "status": command.status}
@@ -90,7 +103,7 @@ def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
     """Mark a mock barrier command closed and leave an auditable event history."""
     with transaction.atomic():
         command = (
-            BarrierCommand.objects.select_for_update().select_related("decision").get(pk=command_id)
+            BarrierCommand.objects.select_for_update().select_related("decision", "gate").get(pk=command_id)
         )
         if command.closed_at is not None or command.status != BarrierCommand.Status.ACKNOWLEDGED:
             return {"command_id": command.pk, "status": command.status}
@@ -100,11 +113,7 @@ def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
         command.save(update_fields=("status", "closed_at", "updated_at"))
         AuditLog.objects.create(
             action="barrier_closed_automatically",
-            details={
-                "event_id": command.decision.event_id,
-                "command_id": command.pk,
-                "gate_id": command.gate_id,
-            },
+            details=barrier_command_audit_details(command),
         )
     return {"command_id": command.pk, "status": command.status}
 

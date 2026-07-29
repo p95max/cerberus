@@ -32,6 +32,14 @@ class ManualBarrierOpenForm(forms.Form):
     )
 
 
+class EmergencyBarrierOpenForm(ManualBarrierOpenForm):
+    gate = forms.ModelChoiceField(
+        queryset=Gate.objects.filter(is_active=True).select_related("site"),
+        label="Gate",
+    )
+    request_reference = forms.CharField(max_length=120, label="Request or ticket number")
+
+
 class ParkingSiteForm(forms.ModelForm):
     class Meta:
         model = ParkingSite

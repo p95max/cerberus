@@ -11,6 +11,8 @@ nav a.active { color: #f2cc60; font-weight: 700; }
 .nav-badge { background: #30363d; border-radius: 999px; color: #e6edf3; display: inline-block; font-size: .72rem; line-height: 1; margin-left: .25rem; min-width: 1.35rem; padding: .22rem .35rem; text-align: center; }
 nav a.active .nav-badge { background: #f2cc60; color: #0d1117; }
 .signed-in { color: #8b949e; font-size: .85rem; white-space: nowrap; }
+.utility-link { color: #8ecbff; font-size: .85rem; text-decoration: none; white-space: nowrap; }
+.utility-link.active { color: #f2cc60; font-weight: 700; }
 .link-button { background: transparent; border: 0; color: #8ecbff; cursor: pointer; padding: 0; }
 .page { margin: 0 auto; max-width: 1280px; padding: 2rem 1rem 3rem; }
 .page-heading { align-items: center; display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
@@ -79,6 +81,9 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .barrier-case h2 { margin: .35rem 0; }
 .barrier-case > p:not(.section-kicker):not(.decision-reason) { color: #8b949e; margin: .1rem 0 1rem; }
 .barrier-case .decision-reason { flex: 1; font-size: .9rem; }
+.barrier-control-panel { align-items: center; background: #161b22; border: 1px solid #30363d; border-radius: .5rem; display: flex; gap: 1.5rem; justify-content: space-between; max-width: 52rem; padding: 1.5rem; }
+.barrier-control-panel h2 { margin: .3rem 0 .6rem; }
+.barrier-control-panel p:last-child { color: #8b949e; margin-bottom: 0; }
 .barrier-open-modal { background: #161b22; border: 1px solid #d29922; border-radius: .65rem; color: #e6edf3; max-width: 38rem; padding: 1.5rem; width: calc(100% - 2rem); }
 .barrier-open-modal::backdrop { background: #010409cc; }
 .barrier-open-modal .barrier-open-form { max-width: none; }
@@ -106,6 +111,7 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .audit-object-link { display: inline-block; font-size: .85rem; margin-left: .55rem; }
 .activity-log-filters { align-items: end; }
 .audit-details { color: #8b949e; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .8rem; max-width: 30rem; overflow-wrap: anywhere; }
+.command-reference { background: #1f6feb24; border: 1px solid #1f6feb; border-radius: 999px; color: #8ecbff; display: inline-block; font-size: .8rem; font-weight: 700; padding: .25rem .5rem; white-space: nowrap; }
 .resource-detail { background: #161b22; border: 1px solid #30363d; border-radius: .5rem; max-width: 44rem; padding: 1.25rem; }
 .audit-opened { background: #1b5e3a33; border-left-color: #3fb950; }
 .audit-opened .audit-icon { background: #1b5e3a; color: #b7f7ca; }

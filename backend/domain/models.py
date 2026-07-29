@@ -206,7 +206,11 @@ class BarrierCommand(TimeStampedModel):
         CLOSED = "closed", "Closed"
 
     decision = models.ForeignKey(
-        AccessDecision, on_delete=models.PROTECT, related_name="barrier_commands"
+        AccessDecision,
+        blank=True,
+        null=True,
+        on_delete=models.PROTECT,
+        related_name="barrier_commands",
     )
     gate = models.ForeignKey(Gate, on_delete=models.PROTECT, related_name="barrier_commands")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
@@ -218,6 +222,7 @@ class BarrierCommand(TimeStampedModel):
     last_error = models.CharField(max_length=255, blank=True)
     manual_reason = models.CharField(max_length=64, blank=True)
     manual_comment = models.CharField(max_length=500, blank=True)
+    request_reference = models.CharField(max_length=120, blank=True)
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )

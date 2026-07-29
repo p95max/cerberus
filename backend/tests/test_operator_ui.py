@@ -176,6 +176,35 @@ def test_operator_can_close_manual_review_case_with_audited_actor(
 
 
 @pytest.mark.django_db
+def test_operator_can_request_urgent_barrier_opening_without_an_event(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    client = Client()
+    client.force_login(operator)
+
+    response = client.post(
+        "/operator/barrier-control/",
+        {
+            "gate": manual_review_event.camera.gate.pk,
+            "request_reference": "INC-42",
+            "reason": "emergency_services",
+            "comment": "Ambulance arrival confirmed.",
+        },
+    )
+
+    command = BarrierCommand.objects.get(request_reference="INC-42")
+    assert response.status_code == 302
+    assert command.decision is None
+    assert command.manual_reason == "emergency_services"
+    assert command.requested_by == operator
+    assert AuditLog.objects.filter(
+        action="emergency_barrier_command_requested",
+        actor=operator,
+        details__command_id=command.pk,
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_automatic_barrier_close_is_recorded(
     operator: User, manual_review_event: RecognitionEvent
 ) -> None:

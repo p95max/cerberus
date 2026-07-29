@@ -19,10 +19,8 @@
           {% if can_view_configuration %}
             <a href="{% url 'manage-resource' 'sites' %}" {% if request.resolver_match.url_name == 'manage-resource' or request.resolver_match.url_name == 'update-resource' %}class="active" aria-current="page"{% endif %}>Configuration</a>
           {% endif %}
-          {% if can_view_configuration %}
-            <a href="{% url 'operator-activity-log' %}" {% if request.resolver_match.url_name == 'operator-activity-log' %}class="active" aria-current="page"{% endif %}>Activity log</a>
-          {% endif %}
         </nav>
+        {% if can_view_configuration %}<a class="utility-link{% if request.resolver_match.url_name == 'operator-activity-log' %} active{% endif %}" href="{% url 'operator-activity-log' %}">Activity log</a>{% endif %}
         <span class="signed-in">Signed in as {{ user.username }} · {{ current_operator_role }}</span>
         <form action="{% url 'operator-logout' %}" method="post">{% csrf_token %}<button class="link-button">Sign out</button></form>
       {% endif %}
