@@ -9,6 +9,7 @@ from accounts.views import (
     ServiceIdentityAPIView,
 )
 from config.views import health, readiness, version
+from domain.views import RecognitionEventAPIView
 
 urlpatterns = [
     path("healthz", health, name="health"),
@@ -21,4 +22,9 @@ urlpatterns = [
     path("api/v1/management/roles", RoleManagementAPIView.as_view(), name="role-management"),
     path("api/v1/audit-logs", AuditLogAPIView.as_view(), name="audit-logs"),
     path("api/v1/service/whoami", ServiceIdentityAPIView.as_view(), name="service-whoami"),
+    path(
+        "api/v1/recognition-events",
+        RecognitionEventAPIView.as_view(),
+        name="recognition-events",
+    ),
 ]

@@ -109,6 +109,7 @@ class RecognitionEvent(TimeStampedModel):
     normalized_plate = models.CharField(max_length=32)
     confidence = models.DecimalField(max_digits=5, decimal_places=4)
     captured_at = models.DateTimeField()
+    image_metadata = models.JSONField(default=dict, blank=True)
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )
