@@ -3,8 +3,8 @@
 body { margin: 0; min-width: 320px; }
 a { color: #8ecbff; }
 .topbar { align-items: center; background: #161b22; border-bottom: 1px solid #30363d; display: flex; gap: 1.5rem; min-height: 4rem; padding: .75rem max(1rem, calc((100vw - 1280px) / 2)); }
-.brand { align-items: center; color: #f2cc60; display: inline-flex; font-weight: 800; gap: .55rem; letter-spacing: .12em; text-decoration: none; }
-.brand img { border-radius: .3rem; display: block; height: 1.875rem; width: 1.875rem; }
+.brand { align-items: center; color: #f2cc60; display: inline-flex; font-weight: 800; gap: .65rem; letter-spacing: .12em; text-decoration: none; }
+.brand img { border-radius: .4rem; display: block; height: 2.625rem; width: 2.625rem; }
 nav { display: flex; flex: 1; gap: 1rem; }
 nav a { text-decoration: none; }
 .signed-in { color: #8b949e; font-size: .85rem; white-space: nowrap; }
