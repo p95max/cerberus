@@ -123,6 +123,7 @@ services:
         condition: service_healthy
     volumes:
       - static_data:/usr/share/nginx/html/static:ro
+      - ./static/favicon.png:/usr/share/nginx/html/favicon.png:ro
     networks:
       - edge
       - application
