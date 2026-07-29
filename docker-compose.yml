@@ -32,6 +32,8 @@ services:
   backend:
     build:
       context: ./backend
+      args:
+        INSTALL_DEV_DEPENDENCIES: "true"
     develop:
       watch:
         - action: rebuild

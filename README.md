@@ -35,6 +35,16 @@ Prerequisites: Docker Desktop with Docker Compose v2.22 or newer. Python 3.12+ a
 
 To stop the stack, run `make down` or `docker compose down`.
 
+## Tests
+
+The development backend image includes the test dependencies. After changing the Dockerfile or
+dependencies, rebuild it once, then run the test suite inside the container:
+
+```bash
+docker compose up --build -d backend
+docker compose exec backend pytest
+```
+
 ## Local users and demo data
 
 On backend startup the development stack runs migrations, creates static files, creates the optional local users, and seeds demo configuration/events. The process is idempotent: restarting containers does not duplicate the demo records.
@@ -42,7 +52,8 @@ On backend startup the development stack runs migrations, creates static files, 
 | Role | Default username | Default password | Capabilities |
 | --- | --- | --- | --- |
 | Operator | `operator` | `operator-demo-password` | Views events and all Configuration sections in read-only mode; can process the manual-review queue. |
-| Administrator | `admin` | `admin-demo-password` | Full operator-console configuration access. |
+| Manager | `manager` | `manager-demo-password` | Operator capabilities plus Configuration changes and Activity log access. |
+| Administrator | `admin` | `admin-demo-password` | Full operator-console configuration access, Activity log export and Django Admin. |
 
 The users and demo data are development-only and can be configured in `.env`:
 
