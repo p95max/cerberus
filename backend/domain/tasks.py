@@ -94,7 +94,8 @@ def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
             action="barrier_command_acknowledged",
             details=barrier_command_audit_details(command),
         )
-        close_barrier_after_delay.apply_async(args=[command.pk], eta=command.auto_close_at)
+        if command.auto_close_at is not None:
+            close_barrier_after_delay.apply_async(args=[command.pk], eta=command.auto_close_at)
     return {"command_id": command.pk, "status": command.status}
 
 

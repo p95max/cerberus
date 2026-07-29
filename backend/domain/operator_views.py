@@ -155,21 +155,64 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
     template_name = "domain/operator/barrier_control.html"
     allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR)
 
+    @staticmethod
+    def emergency_form(data: Any | None = None) -> EmergencyBarrierOpenForm:
+        return EmergencyBarrierOpenForm(
+            data,
+            initial={"auto_close_seconds": barrier_auto_close_seconds()},
+        )
+
     def render_page(
         self, request: HttpRequest, emergency_form: EmergencyBarrierOpenForm, status: int = 200
     ) -> HttpResponse:
+        active_commands = BarrierCommand.objects.select_related("gate__site", "requested_by").filter(
+            decision__isnull=True,
+            status__in=(
+                BarrierCommand.Status.PENDING,
+                BarrierCommand.Status.SENT,
+                BarrierCommand.Status.ACKNOWLEDGED,
+            )
+        ).order_by("-created_at")
         return render(
             request,
             self.template_name,
-            {"emergency_form": emergency_form},
+            {"emergency_form": emergency_form, "active_commands": active_commands},
             status=status,
         )
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        return self.render_page(request, EmergencyBarrierOpenForm())
+        return self.render_page(request, self.emergency_form())
 
     def post(self, request: HttpRequest) -> HttpResponse:
-        form = EmergencyBarrierOpenForm(request.POST)
+        if request.POST.get("action") == "close":
+            command = get_object_or_404(
+                BarrierCommand,
+                pk=request.POST.get("command_id"),
+                decision__isnull=True,
+                status__in=(
+                    BarrierCommand.Status.PENDING,
+                    BarrierCommand.Status.SENT,
+                    BarrierCommand.Status.ACKNOWLEDGED,
+                ),
+            )
+            command.status = BarrierCommand.Status.CLOSED
+            command.closed_at = timezone.now()
+            command.save(update_fields=("status", "closed_at", "updated_at"))
+            record_audit(
+                "barrier_closed_manually",
+                request=request,
+                actor=request.user,
+                details={
+                    "command_id": command.pk,
+                    "gate_id": command.gate_id,
+                    "gate_name": str(command.gate),
+                    "request_reference": command.request_reference,
+                },
+            )
+            messages.success(request, f"Barrier command #{command.pk} closed.")
+            return redirect("operator-barrier-control")
+
+        form = self.emergency_form(request.POST)
         if not form.is_valid():
             return self.render_page(request, form, status=400)
 
@@ -186,7 +229,16 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
             form.add_error(None, "A barrier command is already active for this gate.")
             return self.render_page(request, form, status=400)
 
-        auto_close_at = timezone.now() + timedelta(seconds=barrier_auto_close_seconds())
+        auto_close_seconds = (
+            form.cleaned_data["auto_close_seconds"]
+            if form.cleaned_data["duration_mode"] == "timed"
+            else None
+        )
+        auto_close_at = (
+            timezone.now() + timedelta(seconds=auto_close_seconds)
+            if auto_close_seconds is not None
+            else None
+        )
         reason = form.cleaned_data["reason"]
         command = BarrierCommand.objects.create(
             gate=gate,
@@ -208,11 +260,20 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
                 "manual_reason": reason,
                 "manual_reason_label": dict(ManualBarrierOpenForm.REASON_CHOICES)[reason],
                 "manual_comment": command.manual_comment,
-                "auto_close_at": auto_close_at.isoformat(),
+                "opening_mode": form.cleaned_data["duration_mode"],
+                "auto_close_seconds": auto_close_seconds,
+                "auto_close_at": auto_close_at.isoformat() if auto_close_at else None,
             },
         )
         transaction.on_commit(lambda: dispatch_barrier_command.delay(command.pk))
-        messages.success(request, "Urgent barrier command queued; automatic close is scheduled.")
+        messages.success(
+            request,
+            (
+                f"Urgent barrier command #{command.pk} queued; closing in {auto_close_seconds} seconds."
+                if auto_close_seconds is not None
+                else f"Urgent barrier command #{command.pk} queued; it remains open until closed manually."
+            ),
+        )
         return redirect("operator-barrier-control")
 
 class EventDetailView(OperatorAccessMixin, DetailView):
@@ -384,6 +445,7 @@ class ActivityLogView(OperatorAccessMixin, View):
         "barrier_command_acknowledged": "Barrier command acknowledged",
         "barrier_command_failed": "Barrier command failed",
         "barrier_command_retry_scheduled": "Barrier command retry scheduled",
+        "barrier_closed_manually": "Barrier closed manually",
         "emergency_barrier_command_requested": "Urgent barrier opening requested",
         "login_failed": "Sign-in failed",
         "login_locked": "Sign-in locked",
@@ -448,10 +510,12 @@ class ActivityLogView(OperatorAccessMixin, View):
         entry.command_id = details.get("command_id")
         detail_labels = {
             "auto_close_at": "Auto-close",
+            "auto_close_seconds": "Close after",
             "count": "Count",
             "gate_name": "Gate",
             "manual_comment": "Comment",
             "manual_reason_label": "Reason",
+            "opening_mode": "Opening mode",
             "path": "Path",
             "purged_before": "Purged before",
             "request_reference": "Request",

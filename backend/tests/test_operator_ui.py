@@ -189,6 +189,8 @@ def test_operator_can_request_urgent_barrier_opening_without_an_event(
             "request_reference": "INC-42",
             "reason": "emergency_services",
             "comment": "Ambulance arrival confirmed.",
+            "duration_mode": "timed",
+            "auto_close_seconds": 45,
         },
     )
 
@@ -197,10 +199,43 @@ def test_operator_can_request_urgent_barrier_opening_without_an_event(
     assert command.decision is None
     assert command.manual_reason == "emergency_services"
     assert command.requested_by == operator
+    assert command.auto_close_at is not None
     assert AuditLog.objects.filter(
         action="emergency_barrier_command_requested",
         actor=operator,
         details__command_id=command.pk,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_operator_can_keep_an_urgent_barrier_command_open_until_manual_close(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    client = Client()
+    client.force_login(operator)
+    client.post(
+        "/operator/barrier-control/",
+        {
+            "gate": manual_review_event.camera.gate.pk,
+            "request_reference": "INC-OPEN",
+            "reason": "fire_evacuation",
+            "duration_mode": "indefinite",
+        },
+    )
+    command = BarrierCommand.objects.get(request_reference="INC-OPEN")
+
+    assert command.auto_close_at is None
+    page = client.get("/operator/barrier-control/")
+    assert b"Open until closed manually" in page.content
+
+    close_response = client.post(
+        "/operator/barrier-control/", {"action": "close", "command_id": command.pk}
+    )
+    command.refresh_from_db()
+    assert close_response.status_code == 302
+    assert command.status == BarrierCommand.Status.CLOSED
+    assert AuditLog.objects.filter(
+        action="barrier_closed_manually", details__command_id=command.pk
     ).exists()
 
 

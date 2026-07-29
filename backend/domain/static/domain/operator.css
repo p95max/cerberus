@@ -84,6 +84,14 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .barrier-control-panel { align-items: center; background: #161b22; border: 1px solid #30363d; border-radius: .5rem; display: flex; gap: 1.5rem; justify-content: space-between; max-width: 52rem; padding: 1.5rem; }
 .barrier-control-panel h2 { margin: .3rem 0 .6rem; }
 .barrier-control-panel p:last-child { color: #8b949e; margin-bottom: 0; }
+.form-hint { color: #8b949e; font-size: .85rem; margin: -.25rem 0 0; }
+.active-commands { margin-top: 2rem; }
+.active-commands h2 { margin-bottom: 1rem; }
+.barrier-case h3 { margin: .35rem 0; }
+.barrier-countdown { background: #1b5e3a; border: 1px solid #2ea043; border-radius: .4rem; margin: .75rem 0; padding: .7rem; }
+.barrier-countdown span { color: #b7f7ca; display: block; font-size: .8rem; }
+.barrier-countdown strong { display: block; font-size: 1.2rem; margin-top: .15rem; }
+.persistent-command { color: #ffe58b !important; font-weight: 700; margin: .75rem 0 !important; }
 .barrier-open-modal { background: #161b22; border: 1px solid #d29922; border-radius: .65rem; color: #e6edf3; max-width: 38rem; padding: 1.5rem; width: calc(100% - 2rem); }
 .barrier-open-modal::backdrop { background: #010409cc; }
 .barrier-open-modal .barrier-open-form { max-width: none; }

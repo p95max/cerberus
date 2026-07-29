@@ -33,11 +33,31 @@ class ManualBarrierOpenForm(forms.Form):
 
 
 class EmergencyBarrierOpenForm(ManualBarrierOpenForm):
+    DURATION_CHOICES = (
+        ("timed", "Close automatically"),
+        ("indefinite", "Keep open until closed manually"),
+    )
     gate = forms.ModelChoiceField(
         queryset=Gate.objects.filter(is_active=True).select_related("site"),
         label="Gate",
     )
     request_reference = forms.CharField(max_length=120, label="Request or ticket number")
+    duration_mode = forms.ChoiceField(choices=DURATION_CHOICES, initial="timed", label="Opening mode")
+    auto_close_seconds = forms.IntegerField(
+        min_value=1,
+        max_value=3600,
+        required=False,
+        label="Close after (seconds)",
+    )
+
+    def clean(self) -> dict[str, object]:
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("duration_mode") == "timed"
+            and not cleaned_data.get("auto_close_seconds")
+        ):
+            self.add_error("auto_close_seconds", "Specify the automatic close delay.")
+        return cleaned_data
 
 
 class ParkingSiteForm(forms.ModelForm):
