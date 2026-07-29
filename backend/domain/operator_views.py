@@ -164,13 +164,13 @@ class EventDetailView(OperatorAccessMixin, DetailView):
         return redirect("operator-event-detail", pk=event.pk)
 
 
-RESOURCE_CONFIG: dict[str, tuple[type[Any], type[Any], str]] = {
-    "sites": (ParkingSite, ParkingSiteForm, "Parking sites"),
-    "gates": (Gate, GateForm, "Gates"),
-    "cameras": (Camera, CameraForm, "Cameras"),
-    "vehicles": (Vehicle, VehicleForm, "Vehicles"),
-    "access-lists": (AccessList, AccessListForm, "Access lists"),
-    "access-rules": (AccessRule, AccessRuleForm, "Access rules"),
+RESOURCE_CONFIG: dict[str, tuple[type[Any], type[Any], str, str]] = {
+    "sites": (ParkingSite, ParkingSiteForm, "Parking sites/Objects", "parking site/object"),
+    "gates": (Gate, GateForm, "Gates", "gate"),
+    "cameras": (Camera, CameraForm, "Cameras", "camera"),
+    "vehicles": (Vehicle, VehicleForm, "Vehicles", "vehicle"),
+    "access-lists": (AccessList, AccessListForm, "Access lists", "access list"),
+    "access-rules": (AccessRule, AccessRuleForm, "Access rules", "access rule"),
 }
 
 
@@ -181,7 +181,7 @@ class ManagerAccessMixin(OperatorAccessMixin):
 class ResourceManagementView(OperatorAccessMixin, View):
     template_name = "domain/operator/management.html"
 
-    def get_config(self, resource: str) -> tuple[type[Any], type[Any], str] | None:
+    def get_config(self, resource: str) -> tuple[type[Any], type[Any], str, str] | None:
         return RESOURCE_CONFIG.get(resource)
 
     @staticmethod
@@ -192,9 +192,9 @@ class ResourceManagementView(OperatorAccessMixin, View):
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
-        model, form_class, title = config
+        model, form_class, title, item_label = config
         form = form_class() if self.can_manage(request) else None
-        return self.render_form(request, model.objects.all(), form, title)
+        return self.render_form(request, model.objects.all(), form, title, item_label)
 
     def post(self, request: HttpRequest, resource: str) -> HttpResponse:
         if not self.can_manage(request):
@@ -202,16 +202,21 @@ class ResourceManagementView(OperatorAccessMixin, View):
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
-        model, form_class, title = config
+        model, form_class, title, item_label = config
         form = form_class(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, f"{title[:-1]} saved.")
+            messages.success(request, f"{item_label.capitalize()} saved.")
             return redirect("manage-resource", resource=resource)
-        return self.render_form(request, model.objects.all(), form, title)
+        return self.render_form(request, model.objects.all(), form, title, item_label)
 
     def render_form(
-        self, request: HttpRequest, items: QuerySet[Any], form: Any | None, title: str
+        self,
+        request: HttpRequest,
+        items: QuerySet[Any],
+        form: Any | None,
+        title: str,
+        item_label: str,
     ) -> HttpResponse:
         return render(
             request,
@@ -220,6 +225,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
                 "items": items,
                 "form": form,
                 "title": title,
+                "item_label": item_label,
                 "resource": self.kwargs["resource"],
                 "can_manage": self.can_manage(request),
             },
@@ -229,14 +235,14 @@ class ResourceManagementView(OperatorAccessMixin, View):
 class ResourceUpdateView(ManagerAccessMixin, View):
     template_name = "domain/operator/edit.html"
 
-    def get_config(self, resource: str) -> tuple[type[Any], type[Any], str] | None:
+    def get_config(self, resource: str) -> tuple[type[Any], type[Any], str, str] | None:
         return RESOURCE_CONFIG.get(resource)
 
     def get(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
-        model, form_class, title = config
+        model, form_class, title, _ = config
         item = get_object_or_404(model, pk=pk)
         return render(
             request,
@@ -248,7 +254,7 @@ class ResourceUpdateView(ManagerAccessMixin, View):
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
-        model, form_class, title = config
+        model, form_class, title, _ = config
         item = get_object_or_404(model, pk=pk)
         form = form_class(request.POST, instance=item)
         if form.is_valid():

@@ -64,7 +64,7 @@ After sign-in, the console provides:
 - event list with filters, a result counter and pagination of 20 events per page;
 - a Manual review queue with its event counter in the navigation;
 - event detail and an audited **Open** command for manual-review events (the command is queued for the mock controller and does not operate a physical barrier);
-- Configuration sections for parking sites, gates, cameras, vehicles, access lists and access rules.
+- Configuration sections for parking sites/objects, gates, cameras, vehicles, access lists and access rules.
 
 Administrators and managers can create and edit configuration. Operators and read-only users can view the same configuration pages without forms or edit actions.
 
