@@ -332,7 +332,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
         )
 
 
-class ResourceUpdateView(ManagerAccessMixin, View):
+class ResourceUpdateView(OperatorAccessMixin, View):
     template_name = "domain/operator/edit.html"
 
     def get_config(self, resource: str) -> tuple[type[Any], type[Any], str, str] | None:
@@ -346,6 +346,12 @@ class ResourceUpdateView(ManagerAccessMixin, View):
             return HttpResponseForbidden("Unknown management resource.")
         model, form_class, title, _ = config
         item = get_object_or_404(model, pk=pk)
+        if not ResourceManagementView.can_manage(request):
+            return render(
+                request,
+                "domain/operator/resource_detail.html",
+                {"title": title, "resource": resource, "item": item},
+            )
         return render(
             request,
             self.template_name,
@@ -355,6 +361,8 @@ class ResourceUpdateView(ManagerAccessMixin, View):
     def post(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
         if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
+        if not ResourceManagementView.can_manage(request):
+            return HttpResponseForbidden("Manager role is required to change configuration.")
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")

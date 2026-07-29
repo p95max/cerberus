@@ -1,0 +1,6 @@
+{% extends "domain/operator/base.html" %}
+{% block content %}
+  <p><a href="{% url 'manage-resource' resource %}">← Back to {{ title }}</a></p>
+  <div class="page-heading"><div><p class="eyebrow">Configuration</p><h1>{{ item }} (read-only)</h1></div></div>
+  <section class="resource-detail"><dl class="event-facts">{% if resource == "gates" %}<div><dt>Parking site</dt><dd>{{ item.site.name }}</dd></div><div><dt>External ID</dt><dd>{{ item.external_id }}</dd></div><div><dt>Direction</dt><dd>{{ item.get_direction_display }}</dd></div><div><dt>Status</dt><dd>{% if item.is_active %}Active{% else %}Inactive{% endif %}</dd></div>{% else %}<div><dt>Record</dt><dd>{{ item }}</dd></div>{% endif %}</dl></section>
+{% endblock %}

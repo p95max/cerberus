@@ -201,6 +201,10 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
     assert b"Add Vehicle" not in response.content
     assert b">Edit<" not in response.content
     assert client.post("/operator/manage/vehicles/", {}).status_code == 403
+    gate_response = client.get(f"/operator/manage/gates/{manual_review_event.camera.gate.pk}/")
+    assert gate_response.status_code == 200
+    assert b"(read-only)" in gate_response.content
+    assert client.post(f"/operator/manage/gates/{manual_review_event.camera.gate.pk}/", {}).status_code == 403
 
     client.force_login(manager)
     response = client.get("/operator/manage/vehicles/")
