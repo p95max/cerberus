@@ -2,14 +2,14 @@
 {% block content %}
   <div class="page-heading"><div><p class="eyebrow">Security and operations</p><h1>Activity log</h1></div></div>
   <form class="filters activity-log-filters" method="get">
-    <label>Action<select name="action"><option value="">All actions</option>{% for action in actions %}<option value="{{ action }}" {% if request.GET.action == action %}selected{% endif %}>{{ action }}</option>{% endfor %}</select></label>
+    <label>Action<select name="action"><option value="">All actions</option>{% for action, label in actions %}<option value="{{ action }}" {% if request.GET.action == action %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
     <label>User<select name="actor"><option value="">All users and system</option>{% for actor in actors %}<option value="{{ actor.pk }}" {% if request.GET.actor == actor.pk|stringformat:'s' %}selected{% endif %}>{{ actor.username }}</option>{% endfor %}</select></label>
     <label>Sort<select name="sort"><option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest first</option><option value="oldest" {% if sort == "oldest" %}selected{% endif %}>Oldest first</option><option value="action" {% if sort == "action" %}selected{% endif %}>Action A–Z</option><option value="actor" {% if sort == "actor" %}selected{% endif %}>User A–Z</option></select></label>
     <button type="submit">Apply</button>
   </form>
   <p class="results-count">{{ entries_count }} action{{ entries_count|pluralize }} found</p>
-  <div class="table-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>IP address</th><th>Details</th></tr></thead><tbody>
-  {% for entry in entries %}<tr><td>{{ entry.created_at|date:"Y-m-d H:i:s T" }}</td><td>{{ entry.action }}</td><td>{% if entry.actor %}{{ entry.actor.username }}{% else %}System{% endif %}</td><td>{{ entry.ip_address|default:"—" }}</td><td class="audit-details">{{ entry.details }}</td></tr>{% empty %}<tr><td colspan="5">No actions match these filters.</td></tr>{% endfor %}
+  <div class="table-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Event</th><th>IP address</th><th>Details</th></tr></thead><tbody>
+  {% for entry in entries %}<tr><td>{{ entry.created_at|date:"Y-m-d H:i:s T" }}</td><td title="{{ entry.action }}">{{ entry.action_label }}</td><td>{% if entry.actor %}{{ entry.actor.username }}{% else %}System{% endif %}</td><td>{% if entry.event_id %}<a href="{% url 'operator-event-detail' entry.event_id %}">Event #{{ entry.event_id }}</a>{% else %}—{% endif %}</td><td>{{ entry.ip_address|default:"—" }}</td><td class="audit-details">{% for detail in entry.detail_lines %}<div>{{ detail }}</div>{% empty %}—{% endfor %}</td></tr>{% empty %}<tr><td colspan="6">No actions match these filters.</td></tr>{% endfor %}
   </tbody></table></div>
   {% if entries.paginator.num_pages > 1 %}<div class="pagination" aria-label="Activity log pages">{% if entries.has_previous %}<a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ entries.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ entries.number }} of {{ entries.paginator.num_pages }}</span>{% if entries.has_next %}<a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ entries.next_page_number }}">Next</a>{% endif %}</div>{% endif %}
 {% endblock %}

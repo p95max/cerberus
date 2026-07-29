@@ -73,6 +73,9 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert b'events awaiting manual review">1<' in response.content
     assert response.context["events_count"] == 1
     assert response.context["events"].paginator.per_page == 20
+    barrier_control = client.get("/operator/barrier-control/")
+    assert barrier_control.status_code == 200
+    assert b"Open barrier" in barrier_control.content
 
 
 @pytest.mark.django_db
@@ -120,6 +123,7 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     assert detail.status_code == 200
     assert b"No matching access rule." in detail.content
     assert b"recognition_event_received" in detail.content
+    assert b"Open barrier" in detail.content
     assert rejected.status_code == 302
     assert accepted.status_code == 302
     assert manual_review_event.decision.barrier_commands.count() == 1
@@ -276,8 +280,8 @@ def test_activity_log_is_filterable_and_sortable_for_operators_and_managers(
     )
     assert response.status_code == 200
     assert b"Activity log" in response.content
-    assert b"manual_review_case_closed" in response.content
-    assert b"login_failed" not in response.content
+    assert b"Manual-review case closed" in response.content
+    assert b"Sign-in failed" not in response.content
     assert response.context["entries_count"] == 1
 
 

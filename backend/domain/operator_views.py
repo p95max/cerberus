@@ -150,6 +150,33 @@ class ManualReviewQueueView(OperatorDashboardView):
         return self.render_events(request, events, "Manual review queue", "🔎")
 
 
+class BarrierControlQueueView(OperatorAccessMixin, View):
+    template_name = "domain/operator/barrier_control.html"
+    allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR)
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        events = (
+            filtered_events(request)
+            .filter(
+                decision__outcome=AccessDecision.Outcome.MANUAL_REVIEW,
+                decision__manual_review_closed_at__isnull=True,
+            )
+            .exclude(
+                decision__barrier_commands__status__in=(
+                    BarrierCommand.Status.PENDING,
+                    BarrierCommand.Status.SENT,
+                    BarrierCommand.Status.ACKNOWLEDGED,
+                )
+            )
+            .distinct()
+        )
+        return render(
+            request,
+            self.template_name,
+            {"events": events, "events_count": events.count()},
+        )
+
+
 class EventDetailView(OperatorAccessMixin, DetailView):
     model = RecognitionEvent
     template_name = "domain/operator/event_detail.html"
@@ -313,6 +340,22 @@ class ManagerAccessMixin(OperatorAccessMixin):
 
 class ActivityLogView(OperatorAccessMixin, View):
     template_name = "domain/operator/activity_log.html"
+    action_labels = {
+        "barrier_closed_automatically": "Barrier closed automatically",
+        "barrier_command_acknowledged": "Barrier command acknowledged",
+        "barrier_command_failed": "Barrier command failed",
+        "barrier_command_retry_scheduled": "Barrier command retry scheduled",
+        "login_failed": "Sign-in failed",
+        "login_locked": "Sign-in locked",
+        "login_succeeded": "Signed in",
+        "logout": "Signed out",
+        "manual_barrier_command_requested": "Manual barrier opening requested",
+        "manual_review_case_closed": "Manual-review case closed",
+        "permission_denied": "Permission denied",
+        "recognition_event_metadata_purged": "Recognition image metadata cleared",
+        "recognition_event_received": "Recognition event received",
+        "recognition_events_purged": "Recognition events purged",
+    }
     sort_options = {
         "newest": "-created_at",
         "oldest": "created_at",
@@ -334,6 +377,8 @@ class ActivityLogView(OperatorAccessMixin, View):
         entries = entries.order_by(self.sort_options[sort], "-pk")
         paginator = Paginator(entries, 25)
         page_obj = paginator.get_page(request.GET.get("page"))
+        for entry in page_obj:
+            self.decorate_entry(entry)
         query_params = request.GET.copy()
         query_params.pop("page", None)
         return render(
@@ -342,12 +387,39 @@ class ActivityLogView(OperatorAccessMixin, View):
             {
                 "entries": page_obj,
                 "entries_count": paginator.count,
-                "actions": AuditLog.objects.order_by("action").values_list("action", flat=True).distinct(),
+                "actions": [
+                    (action, self.action_labels.get(action, action.replace("_", " ").capitalize()))
+                    for action in AuditLog.objects.order_by("action")
+                    .values_list("action", flat=True)
+                    .distinct()
+                ],
                 "actors": User.objects.filter(audit_events__isnull=False).order_by("username").distinct(),
                 "sort": sort,
                 "query_string": query_params.urlencode(),
             },
         )
+
+    def decorate_entry(self, entry: AuditLog) -> None:
+        details = entry.details or {}
+        entry.action_label = self.action_labels.get(
+            entry.action, entry.action.replace("_", " ").capitalize()
+        )
+        entry.event_id = details.get("event_id")
+        detail_labels = {
+            "auto_close_at": "Auto-close",
+            "command_id": "Command",
+            "count": "Count",
+            "manual_comment": "Comment",
+            "manual_reason_label": "Reason",
+            "path": "Path",
+            "purged_before": "Purged before",
+            "username": "Username",
+        }
+        entry.detail_lines = [
+            f"{detail_labels[key]}: {value}"
+            for key, value in details.items()
+            if key in detail_labels and value not in (None, "")
+        ]
 
 
 class ResourceManagementView(OperatorAccessMixin, View):

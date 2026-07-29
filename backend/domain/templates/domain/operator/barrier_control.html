@@ -1,0 +1,6 @@
+{% extends "domain/operator/base.html" %}
+{% block content %}
+  <div class="page-heading"><div><p class="eyebrow">Manual override</p><h1>Barrier control</h1></div></div>
+  <p class="results-count">{{ events_count }} case{{ events_count|pluralize }} available for a manual barrier command</p>
+  <section class="barrier-case-grid">{% for event in events %}<article class="barrier-case"><p class="section-kicker">{{ event.camera.gate.site.name }} · {{ event.camera.gate.name }}</p><h2>{{ event.normalized_plate }}</h2><p>{{ event.captured_at|date:"Y-m-d H:i:s T" }}</p><p class="decision-reason">{{ event.decision.reason }}</p><a class="button manual-open-link" href="{% url 'operator-event-detail' event.pk %}?open_barrier=1">Open barrier</a></article>{% empty %}<p>No open manual-review cases are currently available for a barrier command.</p>{% endfor %}</section>
+{% endblock %}

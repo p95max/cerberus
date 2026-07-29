@@ -11,6 +11,7 @@ from accounts.views import (
 from config.views import health, readiness, version
 from domain.operator_views import (
     ActivityLogView,
+    BarrierControlQueueView,
     EventDetailView,
     ManualReviewQueueView,
     OperatorDashboardView,
@@ -41,6 +42,7 @@ urlpatterns = [
     path("operator/logout/", OperatorLogoutView.as_view(), name="operator-logout"),
     path("operator/", OperatorDashboardView.as_view(), name="operator-dashboard"),
     path("operator/manual-review/", ManualReviewQueueView.as_view(), name="manual-review-queue"),
+    path("operator/barrier-control/", BarrierControlQueueView.as_view(), name="operator-barrier-control"),
     path("operator/activity-log/", ActivityLogView.as_view(), name="operator-activity-log"),
     path("operator/events/<int:pk>/", EventDetailView.as_view(), name="operator-event-detail"),
     path(

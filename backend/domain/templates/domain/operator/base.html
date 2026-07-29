@@ -15,6 +15,7 @@
         <nav>
           <a href="{% url 'operator-dashboard' %}" {% if request.resolver_match.url_name == 'operator-dashboard' or request.resolver_match.url_name == 'operator-event-detail' %}class="active" aria-current="page"{% endif %}>Events</a>
           <a href="{% url 'manual-review-queue' %}" {% if request.resolver_match.url_name == 'manual-review-queue' %}class="active" aria-current="page"{% endif %}>Manual review <span class="nav-badge" aria-label="{{ manual_review_count }} events awaiting manual review">{{ manual_review_count }}</span></a>
+          {% if can_control_barrier %}<a href="{% url 'operator-barrier-control' %}" {% if request.resolver_match.url_name == 'operator-barrier-control' %}class="active" aria-current="page"{% endif %}>Barrier control</a>{% endif %}
           {% if can_view_configuration %}
             <a href="{% url 'manage-resource' 'sites' %}" {% if request.resolver_match.url_name == 'manage-resource' or request.resolver_match.url_name == 'update-resource' %}class="active" aria-current="page"{% endif %}>Configuration</a>
           {% endif %}
