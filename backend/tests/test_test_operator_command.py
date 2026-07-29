@@ -6,6 +6,7 @@ from django.test import override_settings
 
 from accounts.models import User
 from accounts.roles import ROLE_OPERATOR, ensure_role_groups
+from domain.models import AccessDecision, Camera, Gate, ParkingSite, RecognitionEvent, Vehicle
 
 
 @pytest.mark.django_db
@@ -53,3 +54,27 @@ def test_ensure_test_operator_creates_administrator(monkeypatch: pytest.MonkeyPa
     user = User.objects.get(username="test-admin")
     assert user.check_password("test-admin-password")
     assert user.groups.filter(name="Administrator").exists()
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_ensure_test_operator_creates_idempotent_demo_data(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREATE_TEST_OPERATOR", "false")
+    monkeypatch.setenv("CREATE_TEST_ADMIN", "false")
+    monkeypatch.setenv("CREATE_DEMO_DATA", "true")
+
+    call_command("ensure_test_operator")
+    call_command("ensure_test_operator")
+
+    assert ParkingSite.objects.filter(external_id="demo-parking").count() == 1
+    assert Gate.objects.filter(site__external_id="demo-parking").count() == 2
+    assert Camera.objects.filter(external_id="demo-entry-camera").exists()
+    assert Vehicle.objects.filter(normalized_plate="A123BC77").exists()
+    assert RecognitionEvent.objects.filter(image_metadata__source="demo-seed").count() == 3
+    assert set(AccessDecision.objects.values_list("outcome", flat=True)) == {
+        AccessDecision.Outcome.ALLOW,
+        AccessDecision.Outcome.DENY,
+        AccessDecision.Outcome.MANUAL_REVIEW,
+    }
