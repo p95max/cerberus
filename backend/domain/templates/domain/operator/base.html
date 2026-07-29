@@ -17,7 +17,6 @@
           <a href="{% url 'manual-review-queue' %}">Manual review</a>
           {% if can_manage_configuration %}
             <a href="{% url 'manage-resource' 'vehicles' %}">Vehicles</a>
-            <a href="{% url 'manage-resource' 'access-rules' %}">Access rules</a>
             <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
           {% endif %}
         </nav>

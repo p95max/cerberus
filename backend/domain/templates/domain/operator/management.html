@@ -1,5 +1,12 @@
 {% extends "domain/operator/base.html" %}
 {% block content %}
   <div class="page-heading"><div><p class="eyebrow">Configuration</p><h1>{{ title }}</h1></div></div>
+  <nav class="settings-tabs" aria-label="Configuration sections">
+    <a href="{% url 'manage-resource' 'sites' %}" {% if resource == 'sites' %}aria-current="page"{% endif %}>Parking sites</a>
+    <a href="{% url 'manage-resource' 'gates' %}" {% if resource == 'gates' %}aria-current="page"{% endif %}>Gates</a>
+    <a href="{% url 'manage-resource' 'cameras' %}" {% if resource == 'cameras' %}aria-current="page"{% endif %}>Cameras</a>
+    <a href="{% url 'manage-resource' 'access-lists' %}" {% if resource == 'access-lists' %}aria-current="page"{% endif %}>Access lists</a>
+    <a href="{% url 'manage-resource' 'access-rules' %}" {% if resource == 'access-rules' %}aria-current="page"{% endif %}>Access rules</a>
+  </nav>
   <div class="management-grid"><section><h2>Add {{ title|slice:":-1" }}</h2><form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form></section><section><h2>Existing records</h2><ul class="record-list">{% for item in items %}<li><span>{{ item }}</span><a href="{% url 'update-resource' resource item.pk %}">Edit</a></li>{% empty %}<li>No records yet.</li>{% endfor %}</ul></section></div>
 {% endblock %}
