@@ -123,7 +123,7 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
     client.force_login(operator)
     response = client.get("/operator/manage/vehicles/")
     assert response.status_code == 200
-    assert b"Records (read-only)" in response.content
+    assert b"Vehicles (read-only)" in response.content
     assert b"Add Vehicle" not in response.content
     assert b">Edit<" not in response.content
     assert client.post("/operator/manage/vehicles/", {}).status_code == 403
