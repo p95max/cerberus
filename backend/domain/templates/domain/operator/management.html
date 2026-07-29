@@ -9,18 +9,15 @@
     <a href="{% url 'manage-resource' 'access-lists' %}" {% if resource == 'access-lists' %}aria-current="page"{% endif %}>Access lists</a>
     <a href="{% url 'manage-resource' 'access-rules' %}" {% if resource == 'access-rules' %}aria-current="page"{% endif %}>Access rules</a>
     <a href="{% url 'manage-resource' 'retention' %}" {% if resource == 'retention' %}aria-current="page"{% endif %}>Data retention</a>
+    <a href="{% url 'manage-resource' 'barrier' %}" {% if resource == 'barrier' %}aria-current="page"{% endif %}>Barrier control</a>
   </nav>
   {% if is_singleton_config %}
-    <section class="retention-settings {% if not can_manage %}read-only{% endif %}">
-      <h2>Retention levels</h2>
+    <section class="singleton-settings {% if not can_manage %}read-only{% endif %}">
+      <h2>{% if resource == 'retention' %}Retention levels{% else %}Automatic close timer{% endif %}</h2>
       {% if can_manage %}
         <form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form>
       {% else %}
-        <dl class="retention-policy">
-          <dt>Image metadata</dt><dd>{% if singleton.image_metadata_enabled %}Enabled · {{ singleton.image_metadata_retention_days }} days{% else %}Disabled{% endif %}</dd>
-          <dt>Full recognition events</dt><dd>{% if singleton.event_retention_enabled %}Enabled · {{ singleton.event_retention_days }} days{% else %}Disabled{% endif %}</dd>
-          <dt>Aggregate cleanup audits</dt><dd>{% if singleton.aggregate_audit_retention_enabled %}Enabled · {{ singleton.aggregate_audit_retention_days }} days{% else %}Disabled{% endif %}</dd>
-        </dl>
+        {% if resource == 'retention' %}<dl class="retention-policy"><dt>Image metadata</dt><dd>{% if singleton.image_metadata_enabled %}Enabled · {{ singleton.image_metadata_retention_days }} days{% else %}Disabled{% endif %}</dd><dt>Full recognition events</dt><dd>{% if singleton.event_retention_enabled %}Enabled · {{ singleton.event_retention_days }} days{% else %}Disabled{% endif %}</dd><dt>Aggregate cleanup audits</dt><dd>{% if singleton.aggregate_audit_retention_enabled %}Enabled · {{ singleton.aggregate_audit_retention_days }} days{% else %}Disabled{% endif %}</dd></dl>{% else %}<dl class="retention-policy"><dt>Automatic close delay</dt><dd>{{ singleton.auto_close_seconds }} seconds</dd></dl>{% endif %}
       {% endif %}
     </section>
   {% else %}

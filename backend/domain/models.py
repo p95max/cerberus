@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -156,6 +157,15 @@ class RecognitionRetentionPolicy(TimeStampedModel):
 
     def __str__(self) -> str:
         return "Recognition data retention policy"
+
+
+class BarrierControlSettings(TimeStampedModel):
+    """Singleton mock-barrier settings controlled from the operator console."""
+
+    auto_close_seconds = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
+
+    def __str__(self) -> str:
+        return "Barrier control settings"
 
 
 class AccessDecision(TimeStampedModel):

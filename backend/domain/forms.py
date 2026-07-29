@@ -5,6 +5,7 @@ from django import forms
 from domain.models import (
     AccessList,
     AccessRule,
+    BarrierControlSettings,
     Camera,
     Gate,
     ParkingSite,
@@ -87,3 +88,10 @@ class RecognitionRetentionPolicyForm(forms.ModelForm):
             "aggregate_audit_retention_enabled": "Delete aggregate cleanup audits",
             "aggregate_audit_retention_days": "Aggregate-audit retention (days)",
         }
+
+
+class BarrierControlSettingsForm(forms.ModelForm):
+    class Meta:
+        model = BarrierControlSettings
+        fields = ("auto_close_seconds",)
+        labels = {"auto_close_seconds": "Automatic close delay (seconds)"}

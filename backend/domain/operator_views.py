@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any, ClassVar
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
@@ -22,6 +21,7 @@ from accounts.roles import ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ROLE
 from domain.forms import (
     AccessListForm,
     AccessRuleForm,
+    BarrierControlSettingsForm,
     CameraForm,
     GateForm,
     ParkingSiteForm,
@@ -33,6 +33,7 @@ from domain.models import (
     AccessList,
     AccessRule,
     BarrierCommand,
+    BarrierControlSettings,
     Camera,
     Gate,
     ParkingSite,
@@ -40,6 +41,7 @@ from domain.models import (
     RecognitionRetentionPolicy,
     Vehicle,
 )
+from domain.services.barrier import barrier_auto_close_seconds, barrier_control_defaults
 from domain.services.retention import retention_policy_defaults
 from domain.tasks import close_barrier_after_delay
 
@@ -170,10 +172,20 @@ class EventDetailView(OperatorAccessMixin, DetailView):
         if request.POST.get("action") != "open":
             messages.error(request, "Choose Open to queue a manual barrier command.")
             return redirect("operator-event-detail", pk=event.pk)
-        if event.decision.barrier_commands.filter(status=BarrierCommand.Status.PENDING).exists():
-            messages.error(request, "A barrier command is already active for this event.")
+        active_command = event.decision.barrier_commands.filter(
+            status=BarrierCommand.Status.PENDING
+        ).order_by("-created_at").first()
+        if active_command is not None:
+            messages.error(
+                request,
+                (
+                    "Automatic gate-close timer is already active."
+                    if active_command.auto_close_at
+                    else "A barrier command is already active for this event."
+                ),
+            )
             return redirect("operator-event-detail", pk=event.pk)
-        auto_close_at = timezone.now() + timedelta(seconds=settings.BARRIER_AUTO_CLOSE_SECONDS)
+        auto_close_at = timezone.now() + timedelta(seconds=barrier_auto_close_seconds())
         command = BarrierCommand.objects.create(
             decision=event.decision,
             gate=event.camera.gate,
@@ -213,6 +225,17 @@ RESOURCE_CONFIG: dict[str, tuple[type[Any], type[Any], str, str]] = {
         "Data retention",
         "retention policy",
     ),
+    "barrier": (
+        BarrierControlSettings,
+        BarrierControlSettingsForm,
+        "Barrier control",
+        "barrier control settings",
+    ),
+}
+
+SINGLETON_RESOURCE_DEFAULTS = {
+    "retention": retention_policy_defaults,
+    "barrier": barrier_control_defaults,
 }
 
 
@@ -232,10 +255,11 @@ class ResourceManagementView(OperatorAccessMixin, View):
 
     @staticmethod
     def get_singleton(resource: str, model: type[Any]) -> Any | None:
-        if resource != "retention":
+        defaults = SINGLETON_RESOURCE_DEFAULTS.get(resource)
+        if defaults is None:
             return None
-        policy, _ = model.objects.get_or_create(pk=1, defaults=retention_policy_defaults())
-        return policy
+        settings_record, _ = model.objects.get_or_create(pk=1, defaults=defaults())
+        return settings_record
 
     def get(self, request: HttpRequest, resource: str) -> HttpResponse:
         config = self.get_config(resource)
@@ -295,7 +319,7 @@ class ResourceUpdateView(ManagerAccessMixin, View):
         return RESOURCE_CONFIG.get(resource)
 
     def get(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
-        if resource == "retention":
+        if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
         config = self.get_config(resource)
         if config is None:
@@ -309,7 +333,7 @@ class ResourceUpdateView(ManagerAccessMixin, View):
         )
 
     def post(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
-        if resource == "retention":
+        if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
         config = self.get_config(resource)
         if config is None:
