@@ -36,5 +36,6 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .message.success { background: #1b5e3a; }
 .message.error { background: #742d35; }
 .login-card { margin: 5rem auto; max-width: 26rem; }
+.login-logo { display: block; height: 4rem; margin: 0 auto 1rem; width: 4rem; }
 @media (max-width: 780px) { .topbar { align-items: flex-start; flex-wrap: wrap; } .topbar nav { flex-basis: 100%; flex-wrap: wrap; order: 3; } .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .detail-grid, .management-grid { grid-template-columns: 1fr; } .page { padding-top: 1.25rem; } }
 @media (max-width: 480px) { .filters { grid-template-columns: 1fr; } .page-heading { align-items: flex-start; flex-direction: column; } }
