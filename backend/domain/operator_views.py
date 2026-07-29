@@ -437,6 +437,51 @@ SINGLETON_RESOURCE_DEFAULTS = {
 }
 
 
+def audit_value(value: Any) -> str:
+    if value is None:
+        return "—"
+    if isinstance(value, bool):
+        return "Enabled" if value else "Disabled"
+    if hasattr(value, "pk"):
+        return str(value)
+    if isinstance(value, (list, tuple)):
+        return ", ".join(audit_value(item) for item in value)
+    return str(value)
+
+
+def record_configuration_change(
+    *,
+    request: HttpRequest,
+    form: Any,
+    resource: str,
+    title: str,
+    item: Any,
+    created: bool,
+) -> None:
+    changes = {
+        field: {
+            "from": audit_value(form.initial.get(field)),
+            "to": audit_value(form.cleaned_data.get(field)),
+        }
+        for field in form.changed_data
+    }
+    record_audit(
+        "configuration_created" if created else "configuration_updated",
+        request=request,
+        actor=request.user,
+        details={
+            "resource": resource,
+            "resource_label": title,
+            "object_id": item.pk,
+            "object_label": str(item),
+            "changes": changes,
+            "change_summary": "; ".join(
+                f"{field}: {values['from']} → {values['to']}" for field, values in changes.items()
+            ),
+        },
+    )
+
+
 class ManagerAccessMixin(OperatorAccessMixin):
     allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER)
 
@@ -449,6 +494,8 @@ class ActivityLogView(ManagerAccessMixin, View):
         "barrier_command_failed": "Barrier command failed",
         "barrier_command_retry_scheduled": "Barrier command retry scheduled",
         "barrier_closed_manually": "Barrier closed manually",
+        "configuration_created": "Configuration record created",
+        "configuration_updated": "Configuration record updated",
         "emergency_barrier_command_requested": "Urgent barrier opening requested",
         "login_failed": "Sign-in failed",
         "login_locked": "Sign-in locked",
@@ -471,12 +518,17 @@ class ActivityLogView(ManagerAccessMixin, View):
         "details": "details_sort_text",
     }
 
-    def filtered_entries(self, request: HttpRequest) -> tuple[QuerySet[AuditLog], str, str]:
+    def filtered_entries(self, request: HttpRequest) -> tuple[QuerySet[AuditLog], str, str, str]:
         entries = AuditLog.objects.select_related("actor").annotate(
             event_sort_id=Cast(KeyTextTransform("event_id", "details"), IntegerField()),
             command_sort_id=Cast(KeyTextTransform("command_id", "details"), IntegerField()),
             details_sort_text=Cast("details", TextField()),
         )
+        log_view = request.GET.get("view", "all")
+        if log_view not in {"all", "configuration"}:
+            log_view = "all"
+        if log_view == "configuration":
+            entries = entries.filter(action__in=("configuration_created", "configuration_updated"))
         if action := request.GET.get("action"):
             entries = entries.filter(action=action)
         if actor_id := request.GET.get("actor"):
@@ -498,10 +550,10 @@ class ActivityLogView(ManagerAccessMixin, View):
             direction = "desc" if sort == "time" else "asc"
         prefix = "-" if direction == "desc" else ""
         entries = entries.order_by(f"{prefix}{self.sort_fields[sort]}", f"{prefix}pk")
-        return entries, sort, direction
+        return entries, sort, direction, log_view
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        entries, sort, direction = self.filtered_entries(request)
+        entries, sort, direction, log_view = self.filtered_entries(request)
         paginator = Paginator(entries, 20)
         page_obj = paginator.get_page(request.GET.get("page"))
         command_ids = [
@@ -539,6 +591,7 @@ class ActivityLogView(ManagerAccessMixin, View):
                 "sort": sort,
                 "sort_direction": direction,
                 "sort_links": sort_links,
+                "log_view": log_view,
                 "query_string": query_params.urlencode(),
                 "can_export_audit_log": has_role(request.user, (ROLE_ADMINISTRATOR,)),
             },
@@ -590,13 +643,16 @@ class ActivityLogView(ManagerAccessMixin, View):
             "auto_close_at": "Auto-close",
             "auto_close_seconds": "Close after",
             "count": "Count",
+            "change_summary": "Changes",
             "gate_name": "Gate",
             "manual_comment": "Comment",
             "manual_reason_label": "Reason",
             "opening_mode": "Opening mode",
+            "object_label": "Record",
             "path": "Path",
             "purged_before": "Purged before",
             "request_reference": "Request",
+            "resource_label": "Configuration",
             "username": "Username",
         }
         entry.detail_lines = []
@@ -617,7 +673,7 @@ class ActivityLogExportView(ActivityLogView):
     allowed_roles = (ROLE_ADMINISTRATOR,)
 
     def get(self, request: HttpRequest) -> JsonResponse:
-        entries, _, _ = self.filtered_entries(request)
+        entries, _, _, _ = self.filtered_entries(request)
         response = JsonResponse(
             [
                 {
@@ -694,7 +750,17 @@ class ResourceManagementView(OperatorAccessMixin, View):
         singleton = self.get_singleton(resource, model)
         form = form_class(request.POST, instance=singleton)
         if form.is_valid():
-            form.save()
+            created = form.instance._state.adding
+            item = form.save()
+            if created or form.changed_data:
+                record_configuration_change(
+                    request=request,
+                    form=form,
+                    resource=resource,
+                    title=title,
+                    item=item,
+                    created=created,
+                )
             messages.success(request, f"{item_label.capitalize()} saved.")
             return redirect("manage-resource", resource=resource)
         items = model.objects.filter(pk=singleton.pk) if singleton else model.objects.all()
@@ -764,6 +830,15 @@ class ResourceUpdateView(OperatorAccessMixin, View):
         form = form_class(request.POST, instance=item)
         if form.is_valid():
             form.save()
+            if form.changed_data:
+                record_configuration_change(
+                    request=request,
+                    form=form,
+                    resource=resource,
+                    title=title,
+                    item=item,
+                    created=False,
+                )
             messages.success(request, "Changes saved.")
             return redirect("manage-resource", resource=resource)
         return render(

@@ -560,6 +560,48 @@ def test_activity_log_supports_sorting_by_every_visible_column(manager: User, so
 
 
 @pytest.mark.django_db
+def test_manager_configuration_changes_are_audited_and_have_a_dedicated_log_tab(
+    manager: User,
+) -> None:
+    client = Client()
+    client.force_login(manager)
+    create = client.post(
+        "/operator/manage/sites/",
+        {
+            "external_id": "audit-site",
+            "name": "Audit Site",
+            "address": "Initial address",
+            "is_active": "on",
+        },
+    )
+    site = ParkingSite.objects.get(external_id="audit-site")
+    update = client.post(
+        f"/operator/manage/sites/{site.pk}/",
+        {
+            "external_id": "audit-site",
+            "name": "Updated Audit Site",
+            "address": "Updated address",
+            "is_active": "on",
+        },
+    )
+
+    assert create.status_code == 302
+    assert update.status_code == 302
+    created_audit = AuditLog.objects.get(action="configuration_created", actor=manager)
+    updated_audit = AuditLog.objects.get(action="configuration_updated", actor=manager)
+    assert created_audit.details["resource"] == "sites"
+    assert "name: Audit Site → Updated Audit Site" in updated_audit.details["change_summary"]
+
+    response = client.get("/operator/activity-log/", {"view": "configuration"})
+
+    assert response.status_code == 200
+    assert response.context["log_view"] == "configuration"
+    assert b"Configuration changes" in response.content
+    assert b"Configuration record created" in response.content
+    assert b"Configuration record updated" in response.content
+
+
+@pytest.mark.django_db
 def test_only_administrator_can_download_activity_log_json(
     manager: User, administrator: User
 ) -> None:

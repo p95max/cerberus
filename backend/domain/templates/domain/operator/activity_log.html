@@ -1,6 +1,7 @@
 {% extends "domain/operator/base.html" %}
 {% block content %}
   <div class="page-heading"><div><p class="eyebrow">Security and operations</p><h1>Activity log</h1></div>{% if can_export_audit_log %}<a class="button secondary" href="{% url 'operator-activity-log-export' %}{% if query_string %}?{{ query_string }}{% endif %}">Download JSON</a>{% endif %}</div>
+  <nav class="settings-tabs log-tabs" aria-label="Activity log views"><a href="{% url 'operator-activity-log' %}" {% if log_view == "all" %}aria-current="page"{% endif %}>All activity</a><a href="{% url 'operator-activity-log' %}?view=configuration" {% if log_view == "configuration" %}aria-current="page"{% endif %}>Configuration changes</a></nav>
   <details class="filters-panel"><summary>Filters and sorting</summary><form class="filters activity-log-filters" method="get">
     <label>Action<select name="action"><option value="">All actions</option>{% for action, label in actions %}<option value="{{ action }}" {% if request.GET.action == action %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
     <label>User<select name="actor"><option value="">All users and system</option>{% for actor in actors %}<option value="{{ actor.pk }}" {% if request.GET.actor == actor.pk|stringformat:'s' %}selected{% endif %}>{{ actor.username }}</option>{% endfor %}</select></label>
