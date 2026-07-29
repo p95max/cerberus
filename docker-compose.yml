@@ -40,6 +40,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      CREATE_TEST_OPERATOR: ${CREATE_TEST_OPERATOR:-true}
+      TEST_OPERATOR_USERNAME: ${TEST_OPERATOR_USERNAME:-operator}
+      TEST_OPERATOR_PASSWORD: ${TEST_OPERATOR_PASSWORD:-operator-demo-password}
     depends_on:
       postgres:
         condition: service_healthy
