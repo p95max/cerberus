@@ -1,16 +1,19 @@
 {% extends "domain/operator/base.html" %}
 {% block content %}
   <div class="page-heading"><div><p class="eyebrow">Operator console</p><h1>{{ title }}</h1></div><a class="button secondary" href="{% url 'manual-review-queue' %}">Review queue</a></div>
-  <form class="filters" method="get">
+  <details class="filters-panel" {% if request.GET %}open{% endif %}>
+    <summary>Filters</summary>
+    <form class="filters" method="get">
     <label>Site<select name="site"><option value="">All sites</option>{% for site in sites %}<option value="{{ site.pk }}" {% if request.GET.site == site.pk|stringformat:'s' %}selected{% endif %}>{{ site.name }}</option>{% endfor %}</select></label>
     <label>Gate<select name="gate"><option value="">All gates</option>{% for gate in gates %}<option value="{{ gate.pk }}" {% if request.GET.gate == gate.pk|stringformat:'s' %}selected{% endif %}>{{ gate.name }}</option>{% endfor %}</select></label>
     <label>Plate<input name="plate" value="{{ request.GET.plate }}" placeholder="A123BC77"></label>
     <label>Decision<select name="decision"><option value="">All decisions</option>{% for value, label in outcomes %}<option value="{{ value }}" {% if request.GET.decision == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
     <label>From<input type="datetime-local" name="from" value="{{ request.GET.from }}"></label>
     <label>To<input type="datetime-local" name="to" value="{{ request.GET.to }}"></label>
-    <button type="submit">Apply filters</button>
-  </form>
-  <div class="table-wrap"><table><thead><tr><th>Captured</th><th>Plate</th><th>Site / gate</th><th>Direction</th><th>Decision</th><th></th></tr></thead><tbody>
-  {% for event in events %}<tr><td>{{ event.captured_at|date:"Y-m-d H:i:s T" }}</td><td>{{ event.normalized_plate }}</td><td>{{ event.camera.gate.site.name }} / {{ event.camera.gate.name }}</td><td>{{ event.camera.gate.get_direction_display }}</td><td><span class="status {{ event.decision.outcome }}">{{ event.decision.get_outcome_display }}</span></td><td><a href="{% url 'operator-event-detail' event.pk %}">Details</a></td></tr>{% empty %}<tr><td colspan="6">No recognition events match these filters.</td></tr>{% endfor %}
+      <button type="submit">Apply filters</button>
+    </form>
+  </details>
+  <div class="table-wrap"><table><thead><tr><th>Captured</th><th>Plate</th><th>Site / gate</th><th>Direction</th><th>Decision</th></tr></thead><tbody>
+  {% for event in events %}<tr class="clickable-row" role="link" tabindex="0" aria-label="Open event {{ event.normalized_plate }}" data-href="{% url 'operator-event-detail' event.pk %}" onclick="window.location=this.dataset.href" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.location=this.dataset.href; }"><td>{{ event.captured_at|date:"Y-m-d H:i:s T" }}</td><td>{{ event.normalized_plate }}</td><td>{{ event.camera.gate.site.name }} / {{ event.camera.gate.name }}</td><td>{{ event.camera.gate.get_direction_display }}</td><td><span class="status {{ event.decision.outcome }}">{{ event.decision.get_outcome_display }}</span></td></tr>{% empty %}<tr><td colspan="5">No recognition events match these filters.</td></tr>{% endfor %}
   </tbody></table></div>
 {% endblock %}
