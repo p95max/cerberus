@@ -346,6 +346,31 @@ def test_operator_can_request_urgent_barrier_opening_without_an_event(
 
 
 @pytest.mark.django_db
+def test_activity_log_labels_independent_manual_override_commands(
+    operator: User, manager: User, manual_review_event: RecognitionEvent
+) -> None:
+    client = Client()
+    client.force_login(operator)
+    client.post(
+        "/operator/barrier-control/",
+        {
+            "gate": manual_review_event.camera.gate.pk,
+            "reason": "emergency_services",
+            "duration_mode": "timed",
+            "auto_close_seconds": 45,
+        },
+    )
+    command = BarrierCommand.objects.get(decision__isnull=True)
+
+    client.force_login(manager)
+    response = client.get("/operator/activity-log/")
+
+    assert response.status_code == 200
+    assert f"Barrier control #{command.pk}".encode() in response.content
+    assert b"Independent manual override from Barrier control" in response.content
+
+
+@pytest.mark.django_db
 def test_operator_can_keep_an_urgent_barrier_command_open_until_manual_close(
     operator: User, manual_review_event: RecognitionEvent
 ) -> None:
@@ -504,6 +529,34 @@ def test_activity_log_is_filterable_and_sortable_for_managers(
     assert b"Manual-review case closed" in response.content
     assert b"Sign-in failed" not in response.content
     assert response.context["entries_count"] == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "sort",
+    ("time", "action", "user", "event", "command", "ip_address", "details"),
+)
+def test_activity_log_supports_sorting_by_every_visible_column(manager: User, sort: str) -> None:
+    AuditLog.objects.create(
+        action="manual_review_case_closed",
+        actor=manager,
+        ip_address="192.0.2.10",
+        details={"event_id": 20, "command_id": 4, "manual_comment": "Second"},
+    )
+    AuditLog.objects.create(
+        action="login_succeeded",
+        ip_address="192.0.2.2",
+        details={"event_id": 2, "command_id": 11, "manual_comment": "First"},
+    )
+    client = Client()
+    client.force_login(manager)
+
+    response = client.get("/operator/activity-log/", {"sort": sort, "direction": "asc"})
+
+    assert response.status_code == 200
+    assert response.context["sort"] == sort
+    assert response.context["sort_direction"] == "asc"
+    assert f"sort={sort}&amp;direction=desc".encode() in response.content
 
 
 @pytest.mark.django_db

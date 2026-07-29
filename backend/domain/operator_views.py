@@ -8,7 +8,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import IntegerField, QuerySet, TextField
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -459,29 +461,47 @@ class ActivityLogView(ManagerAccessMixin, View):
         "recognition_event_received": "Recognition event received",
         "recognition_events_purged": "Recognition events purged",
     }
-    sort_options = {
-        "newest": "-created_at",
-        "oldest": "created_at",
+    sort_fields = {
+        "time": "created_at",
         "action": "action",
-        "actor": "actor__username",
+        "user": "actor__username",
+        "event": "event_sort_id",
+        "command": "command_sort_id",
+        "ip_address": "ip_address",
+        "details": "details_sort_text",
     }
 
-    def filtered_entries(self, request: HttpRequest) -> tuple[QuerySet[AuditLog], str]:
-        entries = AuditLog.objects.select_related("actor")
+    def filtered_entries(self, request: HttpRequest) -> tuple[QuerySet[AuditLog], str, str]:
+        entries = AuditLog.objects.select_related("actor").annotate(
+            event_sort_id=Cast(KeyTextTransform("event_id", "details"), IntegerField()),
+            command_sort_id=Cast(KeyTextTransform("command_id", "details"), IntegerField()),
+            details_sort_text=Cast("details", TextField()),
+        )
         if action := request.GET.get("action"):
             entries = entries.filter(action=action)
         if actor_id := request.GET.get("actor"):
             if actor_id.isdigit():
                 entries = entries.filter(actor_id=int(actor_id))
 
-        sort = request.GET.get("sort", "newest")
-        if sort not in self.sort_options:
-            sort = "newest"
-        entries = entries.order_by(self.sort_options[sort], "-pk")
-        return entries, sort
+        sort = request.GET.get("sort", "time")
+        direction = request.GET.get("direction")
+        legacy_sorts = {
+            "newest": ("time", "desc"),
+            "oldest": ("time", "asc"),
+            "actor": ("user", "asc"),
+        }
+        if sort in legacy_sorts and direction is None:
+            sort, direction = legacy_sorts[sort]
+        if sort not in self.sort_fields:
+            sort = "time"
+        if direction not in {"asc", "desc"}:
+            direction = "desc" if sort == "time" else "asc"
+        prefix = "-" if direction == "desc" else ""
+        entries = entries.order_by(f"{prefix}{self.sort_fields[sort]}", f"{prefix}pk")
+        return entries, sort, direction
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        entries, sort = self.filtered_entries(request)
+        entries, sort, direction = self.filtered_entries(request)
         paginator = Paginator(entries, 20)
         page_obj = paginator.get_page(request.GET.get("page"))
         command_ids = [
@@ -494,6 +514,15 @@ class ActivityLogView(ManagerAccessMixin, View):
             self.decorate_entry(entry, commands.get((entry.details or {}).get("command_id")))
         query_params = request.GET.copy()
         query_params.pop("page", None)
+        sort_query_params = query_params.copy()
+        sort_query_params.pop("sort", None)
+        sort_query_params.pop("direction", None)
+        sort_links = {}
+        for key in self.sort_fields:
+            params = sort_query_params.copy()
+            params["sort"] = key
+            params["direction"] = "desc" if key == sort and direction == "asc" else "asc"
+            sort_links[key] = params.urlencode()
         return render(
             request,
             self.template_name,
@@ -508,6 +537,8 @@ class ActivityLogView(ManagerAccessMixin, View):
                 ],
                 "actors": User.objects.filter(audit_events__isnull=False).order_by("username").distinct(),
                 "sort": sort,
+                "sort_direction": direction,
+                "sort_links": sort_links,
                 "query_string": query_params.urlencode(),
                 "can_export_audit_log": has_role(request.user, (ROLE_ADMINISTRATOR,)),
             },
@@ -527,6 +558,15 @@ class ActivityLogView(ManagerAccessMixin, View):
         )
         entry.event_id = details.get("event_id")
         entry.command_id = details.get("command_id")
+        entry.is_independent_command = (
+            (command is not None and command.decision_id is None)
+            or entry.action == "emergency_barrier_command_requested"
+        )
+        entry.command_label = (
+            f"Barrier control #{entry.command_id}"
+            if entry.is_independent_command
+            else f"Barrier command #{entry.command_id}"
+        )
         entry.is_indefinite_opening = (
             details.get("opening_mode") == "indefinite"
             or (
@@ -577,7 +617,7 @@ class ActivityLogExportView(ActivityLogView):
     allowed_roles = (ROLE_ADMINISTRATOR,)
 
     def get(self, request: HttpRequest) -> JsonResponse:
-        entries, _ = self.filtered_entries(request)
+        entries, _, _ = self.filtered_entries(request)
         response = JsonResponse(
             [
                 {

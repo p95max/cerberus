@@ -120,7 +120,10 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .audit-object-link { display: inline-block; font-size: .85rem; margin-left: .55rem; }
 .activity-log-filters { align-items: end; }
 .audit-details { color: #8b949e; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .8rem; max-width: 30rem; overflow-wrap: anywhere; }
+.sortable-column { color: inherit; text-decoration: none; white-space: nowrap; }
+.sortable-column:hover, .sortable-column:focus-visible { color: #f2cc60; text-decoration: underline; }
 .command-reference { background: #1f6feb24; border: 1px solid #1f6feb; border-radius: 999px; color: #8ecbff; display: inline-block; font-size: .8rem; font-weight: 700; padding: .25rem .5rem; white-space: nowrap; }
+.independent-command-reference { background: #624d142b; border-color: #d29922; color: #f2cc60; }
 .indefinite-opening-row { background: #742d3533; }
 .indefinite-opening-row td:first-child { border-left: 3px solid #f85149; }
 .event-linked-opening-row { background: #1f6feb24; }
