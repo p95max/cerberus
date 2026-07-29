@@ -45,6 +45,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - static_data:/app/staticfiles
     healthcheck:
       test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()"]
       interval: 10s
@@ -96,12 +98,15 @@ services:
         condition: service_healthy
       janus:
         condition: service_healthy
+    volumes:
+      - static_data:/usr/share/nginx/html/static:ro
     networks:
       - edge
       - application
 
 volumes:
   postgres_data:
+  static_data:
 
 networks:
   edge:

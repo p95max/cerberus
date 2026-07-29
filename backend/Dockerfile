@@ -11,10 +11,10 @@ RUN groupadd --system cerberus && useradd --system --gid cerberus --create-home 
 COPY pyproject.toml ./
 RUN poetry install --only main --no-root
 COPY . ./
-RUN chown -R cerberus:cerberus /app
+RUN mkdir -p /app/staticfiles && chown -R cerberus:cerberus /app
 
 USER cerberus
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
