@@ -2,7 +2,7 @@
 {% block title %}Sign in · Cerberus{% endblock %}
 {% block content %}
   <section class="login-card">
-    <img class="login-logo" src="/favicon.png" alt="Cerberus" width="64" height="64">
+    <img class="login-logo" src="/favicon.png" alt="Cerberus" width="144" height="144">
     <h1>Operator sign in</h1>
     <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Sign in</button></form>
   </section>
