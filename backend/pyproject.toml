@@ -35,6 +35,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--ds=config.settings.test"
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 
 [tool.mypy]

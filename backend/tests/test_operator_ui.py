@@ -518,7 +518,6 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
         ("vehicles", b"Known vehicle records"),
         ("access-lists", b"Allow and deny lists"),
         ("access-rules", b"Defines whether a specific vehicle is allowed or denied"),
-        ("retention", b"How long recognition data"),
         ("barrier", b"Default automatic-close delay"),
     ),
 )
@@ -647,24 +646,30 @@ def test_only_administrator_can_download_activity_log_json(
 
 
 @pytest.mark.django_db
-def test_retention_settings_are_editable_for_manager_and_read_only_for_operator(
-    operator: User, manager: User
+def test_data_retention_is_visible_and_editable_only_for_administrator(
+    operator: User, manager: User, administrator: User
 ) -> None:
     client = Client()
     client.force_login(operator)
     response = client.get("/operator/manage/retention/")
 
-    assert response.status_code == 200
-    assert b"Data retention (read-only)" in response.content
-    assert b"Retention levels" in response.content
-    assert b"Save" not in response.content
+    assert response.status_code == 403
 
     client.force_login(manager)
+    response = client.get("/operator/manage/retention/")
+
+    assert response.status_code == 403
+
+    client.force_login(administrator)
     response = client.get("/operator/manage/retention/")
 
     assert response.status_code == 200
     assert b"Clear image metadata" in response.content
     assert b"Save" in response.content
+
+    client.force_login(manager)
+    configuration = client.get("/operator/manage/sites/")
+    assert b"Data retention" not in configuration.content
 
 
 @pytest.mark.django_db

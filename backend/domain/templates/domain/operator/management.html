@@ -8,7 +8,7 @@
     <a href="{% url 'manage-resource' 'vehicles' %}" {% if resource == 'vehicles' %}aria-current="page"{% endif %}>Vehicles</a>
     <a href="{% url 'manage-resource' 'access-lists' %}" {% if resource == 'access-lists' %}aria-current="page"{% endif %}>Access lists</a>
     <a href="{% url 'manage-resource' 'access-rules' %}" {% if resource == 'access-rules' %}aria-current="page"{% endif %}>Access rules</a>
-    <a href="{% url 'manage-resource' 'retention' %}" {% if resource == 'retention' %}aria-current="page"{% endif %}>Data retention</a>
+    {% if can_view_retention %}<a href="{% url 'manage-resource' 'retention' %}" {% if resource == 'retention' %}aria-current="page"{% endif %}>Data retention</a>{% endif %}
     <a href="{% url 'manage-resource' 'barrier' %}" {% if resource == 'barrier' %}aria-current="page"{% endif %}>Barrier control</a>
   </nav>
   <p class="settings-description">{{ resource_description }}</p>

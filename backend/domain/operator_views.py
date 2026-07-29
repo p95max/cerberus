@@ -737,6 +737,12 @@ class ResourceManagementView(OperatorAccessMixin, View):
         return has_role(request.user, (ROLE_ADMINISTRATOR, ROLE_MANAGER))
 
     @staticmethod
+    def can_view_resource(request: HttpRequest, resource: str) -> bool:
+        if resource == "retention":
+            return has_role(request.user, (ROLE_ADMINISTRATOR,))
+        return True
+
+    @staticmethod
     def get_singleton(resource: str, model: type[Any]) -> Any | None:
         defaults = SINGLETON_RESOURCE_DEFAULTS.get(resource)
         if defaults is None:
@@ -748,6 +754,8 @@ class ResourceManagementView(OperatorAccessMixin, View):
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
+        if not self.can_view_resource(request, resource):
+            return HttpResponseForbidden("Administrator role is required to view data retention.")
         model, form_class, title, item_label = config
         singleton = self.get_singleton(resource, model)
         form = form_class(instance=singleton) if self.can_manage(request) else None
@@ -760,6 +768,8 @@ class ResourceManagementView(OperatorAccessMixin, View):
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
+        if not self.can_view_resource(request, resource):
+            return HttpResponseForbidden("Administrator role is required to view data retention.")
         model, form_class, title, item_label = config
         singleton = self.get_singleton(resource, model)
         form = form_class(request.POST, instance=singleton)
@@ -800,6 +810,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
                 "resource": self.kwargs["resource"],
                 "resource_description": RESOURCE_DESCRIPTIONS[self.kwargs["resource"]],
                 "can_manage": self.can_manage(request),
+                "can_view_retention": has_role(request.user, (ROLE_ADMINISTRATOR,)),
                 "singleton": singleton,
                 "is_singleton_config": singleton is not None,
             },
@@ -813,6 +824,8 @@ class ResourceUpdateView(OperatorAccessMixin, View):
         return RESOURCE_CONFIG.get(resource)
 
     def get(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
+        if not ResourceManagementView.can_view_resource(request, resource):
+            return HttpResponseForbidden("Administrator role is required to view data retention.")
         if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
         config = self.get_config(resource)
@@ -833,6 +846,8 @@ class ResourceUpdateView(OperatorAccessMixin, View):
         )
 
     def post(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
+        if not ResourceManagementView.can_view_resource(request, resource):
+            return HttpResponseForbidden("Administrator role is required to view data retention.")
         if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
         if not ResourceManagementView.can_manage(request):
