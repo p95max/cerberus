@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from django import forms
 
-from domain.models import AccessList, AccessRule, Camera, Gate, ParkingSite, Vehicle
+from domain.models import (
+    AccessList,
+    AccessRule,
+    Camera,
+    Gate,
+    ParkingSite,
+    RecognitionRetentionPolicy,
+    Vehicle,
+)
 
 
 class ParkingSiteForm(forms.ModelForm):
@@ -57,4 +65,25 @@ class AccessRuleForm(forms.ModelForm):
             "allowed_from_time": forms.TimeInput(attrs={"type": "time"}),
             "allowed_until_time": forms.TimeInput(attrs={"type": "time"}),
             "allowed_weekdays": forms.TextInput(attrs={"placeholder": "[0, 1, 2, 3, 4]"}),
+        }
+
+
+class RecognitionRetentionPolicyForm(forms.ModelForm):
+    class Meta:
+        model = RecognitionRetentionPolicy
+        fields = (
+            "image_metadata_enabled",
+            "image_metadata_retention_days",
+            "event_retention_enabled",
+            "event_retention_days",
+            "aggregate_audit_retention_enabled",
+            "aggregate_audit_retention_days",
+        )
+        labels = {
+            "image_metadata_enabled": "Clear image metadata",
+            "image_metadata_retention_days": "Image metadata retention (days)",
+            "event_retention_enabled": "Delete full recognition events",
+            "event_retention_days": "Full-event retention (days)",
+            "aggregate_audit_retention_enabled": "Delete aggregate cleanup audits",
+            "aggregate_audit_retention_days": "Aggregate-audit retention (days)",
         }

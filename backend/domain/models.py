@@ -137,10 +137,25 @@ class RecognitionEvent(TimeStampedModel):
         indexes = [
             models.Index(fields=("camera", "captured_at")),
             models.Index(fields=("normalized_plate", "captured_at")),
+            models.Index(fields=("retention_expires_at",), name="domain_retent_expires_idx"),
         ]
 
     def __str__(self) -> str:
         return f"{self.normalized_plate} at {self.captured_at:%Y-%m-%d %H:%M:%S}"
+
+
+class RecognitionRetentionPolicy(TimeStampedModel):
+    """Singleton policy controlled from the operator configuration console."""
+
+    image_metadata_enabled = models.BooleanField(default=True)
+    image_metadata_retention_days = models.PositiveIntegerField(default=30)
+    event_retention_enabled = models.BooleanField(default=True)
+    event_retention_days = models.PositiveIntegerField(default=180)
+    aggregate_audit_retention_enabled = models.BooleanField(default=True)
+    aggregate_audit_retention_days = models.PositiveIntegerField(default=730)
+
+    def __str__(self) -> str:
+        return "Recognition data retention policy"
 
 
 class AccessDecision(TimeStampedModel):

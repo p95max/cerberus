@@ -23,6 +23,7 @@ from domain.forms import (
     CameraForm,
     GateForm,
     ParkingSiteForm,
+    RecognitionRetentionPolicyForm,
     VehicleForm,
 )
 from domain.models import (
@@ -34,8 +35,10 @@ from domain.models import (
     Gate,
     ParkingSite,
     RecognitionEvent,
+    RecognitionRetentionPolicy,
     Vehicle,
 )
+from domain.services.retention import retention_policy_defaults
 
 
 class OperatorLoginView(LoginView):
@@ -90,10 +93,16 @@ class OperatorDashboardView(OperatorAccessMixin, View):
     template_name = "domain/operator/dashboard.html"
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        return self.render_events(request, filtered_events(request), "Recent recognition events")
+        return self.render_events(
+            request, filtered_events(request), "Recent recognition events", "📋"
+        )
 
     def render_events(
-        self, request: HttpRequest, events: QuerySet[RecognitionEvent], title: str
+        self,
+        request: HttpRequest,
+        events: QuerySet[RecognitionEvent],
+        title: str,
+        heading_icon: str,
     ) -> HttpResponse:
         paginator = Paginator(events, 20)
         page_obj = paginator.get_page(request.GET.get("page"))
@@ -107,6 +116,7 @@ class OperatorDashboardView(OperatorAccessMixin, View):
                 "events_count": paginator.count,
                 "query_string": query_params.urlencode(),
                 "title": title,
+                "heading_icon": heading_icon,
                 "sites": ParkingSite.objects.filter(is_active=True),
                 "gates": Gate.objects.filter(is_active=True).select_related("site"),
                 "outcomes": AccessDecision.Outcome.choices,
@@ -119,7 +129,7 @@ class ManualReviewQueueView(OperatorDashboardView):
         events = filtered_events(request).filter(
             decision__outcome=AccessDecision.Outcome.MANUAL_REVIEW
         )
-        return self.render_events(request, events, "Manual review queue")
+        return self.render_events(request, events, "Manual review queue", "🔎")
 
 
 class EventDetailView(OperatorAccessMixin, DetailView):
@@ -171,6 +181,12 @@ RESOURCE_CONFIG: dict[str, tuple[type[Any], type[Any], str, str]] = {
     "vehicles": (Vehicle, VehicleForm, "Vehicles", "vehicle"),
     "access-lists": (AccessList, AccessListForm, "Access lists", "access list"),
     "access-rules": (AccessRule, AccessRuleForm, "Access rules", "access rule"),
+    "retention": (
+        RecognitionRetentionPolicy,
+        RecognitionRetentionPolicyForm,
+        "Data retention",
+        "retention policy",
+    ),
 }
 
 
@@ -188,13 +204,22 @@ class ResourceManagementView(OperatorAccessMixin, View):
     def can_manage(request: HttpRequest) -> bool:
         return has_role(request.user, (ROLE_ADMINISTRATOR, ROLE_MANAGER))
 
+    @staticmethod
+    def get_singleton(resource: str, model: type[Any]) -> Any | None:
+        if resource != "retention":
+            return None
+        policy, _ = model.objects.get_or_create(pk=1, defaults=retention_policy_defaults())
+        return policy
+
     def get(self, request: HttpRequest, resource: str) -> HttpResponse:
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
         model, form_class, title, item_label = config
-        form = form_class() if self.can_manage(request) else None
-        return self.render_form(request, model.objects.all(), form, title, item_label)
+        singleton = self.get_singleton(resource, model)
+        form = form_class(instance=singleton) if self.can_manage(request) else None
+        items = model.objects.filter(pk=singleton.pk) if singleton else model.objects.all()
+        return self.render_form(request, items, form, title, item_label, singleton)
 
     def post(self, request: HttpRequest, resource: str) -> HttpResponse:
         if not self.can_manage(request):
@@ -203,12 +228,14 @@ class ResourceManagementView(OperatorAccessMixin, View):
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
         model, form_class, title, item_label = config
-        form = form_class(request.POST)
+        singleton = self.get_singleton(resource, model)
+        form = form_class(request.POST, instance=singleton)
         if form.is_valid():
             form.save()
             messages.success(request, f"{item_label.capitalize()} saved.")
             return redirect("manage-resource", resource=resource)
-        return self.render_form(request, model.objects.all(), form, title, item_label)
+        items = model.objects.filter(pk=singleton.pk) if singleton else model.objects.all()
+        return self.render_form(request, items, form, title, item_label, singleton)
 
     def render_form(
         self,
@@ -217,6 +244,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
         form: Any | None,
         title: str,
         item_label: str,
+        singleton: Any | None,
     ) -> HttpResponse:
         return render(
             request,
@@ -228,6 +256,8 @@ class ResourceManagementView(OperatorAccessMixin, View):
                 "item_label": item_label,
                 "resource": self.kwargs["resource"],
                 "can_manage": self.can_manage(request),
+                "singleton": singleton,
+                "is_singleton_config": singleton is not None,
             },
         )
 
@@ -239,6 +269,8 @@ class ResourceUpdateView(ManagerAccessMixin, View):
         return RESOURCE_CONFIG.get(resource)
 
     def get(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
+        if resource == "retention":
+            return redirect("manage-resource", resource=resource)
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
@@ -251,6 +283,8 @@ class ResourceUpdateView(ManagerAccessMixin, View):
         )
 
     def post(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
+        if resource == "retention":
+            return redirect("manage-resource", resource=resource)
         config = self.get_config(resource)
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")

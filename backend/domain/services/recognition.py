@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from domain.models import AccessDecision, Camera, RecognitionEvent
 from domain.services.decisions import decide, normalize_plate
+from domain.services.retention import get_retention_policy
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,7 @@ def submit_recognition_event(
         return _submission_for_existing(existing)
 
     camera = _find_camera(camera_external_id, direction)
+    retention_policy = get_retention_policy()
     try:
         with transaction.atomic():
             event = RecognitionEvent.objects.create(
@@ -74,6 +76,11 @@ def submit_recognition_event(
                 captured_at=captured_at,
                 image_metadata=image_metadata,
                 submitted_by=submitted_by,
+                retention_expires_at=(
+                    captured_at + timedelta(days=retention_policy.event_days)
+                    if retention_policy.event_enabled
+                    else None
+                ),
             )
             return RecognitionSubmission(event=event, decision=decide(event), created=True)
     except IntegrityError:

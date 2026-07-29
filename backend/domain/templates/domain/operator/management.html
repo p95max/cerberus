@@ -1,6 +1,6 @@
 {% extends "domain/operator/base.html" %}
 {% block content %}
-  <div class="page-heading"><div><p class="eyebrow">Configuration</p><h1>{{ title }}{% if not can_manage %} (read-only){% endif %}</h1></div></div>
+  <div class="page-heading"><div><p class="eyebrow">Configuration</p><h1><span class="heading-icon" aria-hidden="true">⚙️</span>{{ title }}{% if not can_manage %} (read-only){% endif %}</h1></div></div>
   <nav class="settings-tabs" aria-label="Configuration sections">
     <a href="{% url 'manage-resource' 'sites' %}" {% if resource == 'sites' %}aria-current="page"{% endif %}>Parking sites/Objects</a>
     <a href="{% url 'manage-resource' 'gates' %}" {% if resource == 'gates' %}aria-current="page"{% endif %}>Gates</a>
@@ -8,6 +8,22 @@
     <a href="{% url 'manage-resource' 'vehicles' %}" {% if resource == 'vehicles' %}aria-current="page"{% endif %}>Vehicles</a>
     <a href="{% url 'manage-resource' 'access-lists' %}" {% if resource == 'access-lists' %}aria-current="page"{% endif %}>Access lists</a>
     <a href="{% url 'manage-resource' 'access-rules' %}" {% if resource == 'access-rules' %}aria-current="page"{% endif %}>Access rules</a>
+    <a href="{% url 'manage-resource' 'retention' %}" {% if resource == 'retention' %}aria-current="page"{% endif %}>Data retention</a>
   </nav>
-  <div class="management-grid {% if not can_manage %}read-only{% endif %}">{% if can_manage %}<section><h2>Add {{ item_label|capfirst }}</h2><form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form></section>{% endif %}<section><h2>Existing records</h2><ul class="record-list">{% for item in items %}<li><span>{{ item }}</span>{% if can_manage %}<a href="{% url 'update-resource' resource item.pk %}">Edit</a>{% endif %}</li>{% empty %}<li>No records yet.</li>{% endfor %}</ul></section></div>
+  {% if is_singleton_config %}
+    <section class="retention-settings {% if not can_manage %}read-only{% endif %}">
+      <h2>Retention levels</h2>
+      {% if can_manage %}
+        <form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form>
+      {% else %}
+        <dl class="retention-policy">
+          <dt>Image metadata</dt><dd>{% if singleton.image_metadata_enabled %}Enabled · {{ singleton.image_metadata_retention_days }} days{% else %}Disabled{% endif %}</dd>
+          <dt>Full recognition events</dt><dd>{% if singleton.event_retention_enabled %}Enabled · {{ singleton.event_retention_days }} days{% else %}Disabled{% endif %}</dd>
+          <dt>Aggregate cleanup audits</dt><dd>{% if singleton.aggregate_audit_retention_enabled %}Enabled · {{ singleton.aggregate_audit_retention_days }} days{% else %}Disabled{% endif %}</dd>
+        </dl>
+      {% endif %}
+    </section>
+  {% else %}
+    <div class="management-grid {% if not can_manage %}read-only{% endif %}">{% if can_manage %}<section><h2>Add {{ item_label|capfirst }}</h2><form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form></section>{% endif %}<section><h2>Existing records</h2><ul class="record-list">{% for item in items %}<li><span>{{ item }}</span>{% if can_manage %}<a href="{% url 'update-resource' resource item.pk %}">Edit</a>{% endif %}</li>{% empty %}<li>No records yet.</li>{% endfor %}</ul></section></div>
+  {% endif %}
 {% endblock %}

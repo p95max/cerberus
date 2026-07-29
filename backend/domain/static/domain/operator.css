@@ -15,6 +15,7 @@ nav a.active .nav-badge { background: #f2cc60; color: #0d1117; }
 .page { margin: 0 auto; max-width: 1280px; padding: 2rem 1rem 3rem; }
 .page-heading { align-items: center; display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
 .page-heading h1 { margin: .2rem 0; }
+.heading-icon { margin-right: .35rem; }
 .eyebrow { color: #8b949e; font-size: .78rem; letter-spacing: .12em; margin: 0; text-transform: uppercase; }
 .filters, .detail-grid, .management-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 1.5rem; }
 .filters-panel { margin-bottom: 1.5rem; }
@@ -43,7 +44,10 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .settings-tabs { border-bottom: 1px solid #30363d; display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1.5rem; }
 .settings-tabs a { border-bottom: 2px solid transparent; color: #8ecbff; padding: .6rem .75rem; text-decoration: none; }
 .settings-tabs a[aria-current="page"] { border-bottom-color: #f2cc60; color: #f2cc60; font-weight: 700; }
-.detail-grid > div, .management-grid > section, .login-card { background: #161b22; border: 1px solid #30363d; border-radius: .5rem; padding: 1.25rem; }
+.detail-grid > div, .management-grid > section, .retention-settings, .login-card { background: #161b22; border: 1px solid #30363d; border-radius: .5rem; padding: 1.25rem; }
+.retention-policy { display: grid; gap: .45rem 1rem; grid-template-columns: max-content 1fr; }
+.retention-policy dd, .retention-policy dt { margin: 0; }
+.retention-policy dt { color: #8b949e; }
 .stacked-form p { display: grid; gap: .35rem; }
 .record-list, .audit-list { list-style: none; padding: 0; }
 .record-list li { border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; padding: .75rem 0; }

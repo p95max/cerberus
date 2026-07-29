@@ -132,3 +132,24 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
     response = client.get("/operator/manage/vehicles/")
     assert response.status_code == 200
     assert b"Vehicles" in response.content
+
+
+@pytest.mark.django_db
+def test_retention_settings_are_editable_for_manager_and_read_only_for_operator(
+    operator: User, manager: User
+) -> None:
+    client = Client()
+    client.force_login(operator)
+    response = client.get("/operator/manage/retention/")
+
+    assert response.status_code == 200
+    assert b"Data retention (read-only)" in response.content
+    assert b"Retention levels" in response.content
+    assert b"Save" not in response.content
+
+    client.force_login(manager)
+    response = client.get("/operator/manage/retention/")
+
+    assert response.status_code == 200
+    assert b"Clear image metadata" in response.content
+    assert b"Save" in response.content

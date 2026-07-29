@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+from datetime import timedelta
+from typing import Any
+
+from celery import shared_task
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
+
+from accounts.models import AuditLog
+from domain.models import AccessDecision, BarrierCommand, RecognitionEvent
+from domain.services.retention import get_retention_policy
+
+AGGREGATE_RETENTION_AUDIT_ACTIONS = (
+    "recognition_event_metadata_purged",
+    "recognition_events_purged",
+)
+
+
+@shared_task
+def purge_expired_recognition_events() -> dict[str, Any]:
+    """Remove expired events and image metadata in bounded transactions."""
+    now = timezone.now()
+    policy = get_retention_policy()
+    purged_metadata = 0
+    if policy.image_metadata_enabled:
+        metadata_cutoff = now - timedelta(days=policy.image_metadata_days)
+        purged_metadata = (
+            RecognitionEvent.objects.filter(
+                captured_at__lte=metadata_cutoff,
+            )
+            .filter(Q(retention_expires_at__isnull=True) | Q(retention_expires_at__gt=now))
+            .exclude(image_metadata={})
+            .update(image_metadata={})
+        )
+    purged_events = 0
+
+    if policy.event_enabled:
+        event_cutoff = now - timedelta(days=policy.event_days)
+        while True:
+            event_ids = list(
+                RecognitionEvent.objects.filter(
+                    Q(retention_expires_at__lte=now)
+                    | Q(retention_expires_at__isnull=True, captured_at__lte=event_cutoff)
+                )
+                .order_by("pk")
+                .values_list("pk", flat=True)[: settings.RECOGNITION_PURGE_BATCH_SIZE]
+            )
+            if not event_ids:
+                break
+
+            with transaction.atomic():
+                BarrierCommand.objects.filter(decision__event_id__in=event_ids).delete()
+                AccessDecision.objects.filter(event_id__in=event_ids).delete()
+                deleted_events, _ = RecognitionEvent.objects.filter(pk__in=event_ids).delete()
+                purged_events += deleted_events
+
+    if purged_metadata:
+        AuditLog.objects.create(
+            action="recognition_event_metadata_purged",
+            details={
+                "count": purged_metadata,
+                "purged_before": (now - timedelta(days=policy.image_metadata_days)).isoformat(),
+            },
+        )
+    if purged_events:
+        AuditLog.objects.create(
+            action="recognition_events_purged",
+            details={"count": purged_events, "purged_before": now.isoformat()},
+        )
+
+    purged_aggregate_audits = 0
+    if policy.aggregate_audit_enabled:
+        audit_cutoff = now - timedelta(days=policy.aggregate_audit_days)
+        purged_aggregate_audits, _ = AuditLog.objects.filter(
+            action__in=AGGREGATE_RETENTION_AUDIT_ACTIONS,
+            created_at__lte=audit_cutoff,
+        ).delete()
+
+    return {
+        "purged_events": purged_events,
+        "purged_metadata": purged_metadata,
+        "purged_aggregate_audits": purged_aggregate_audits,
+    }

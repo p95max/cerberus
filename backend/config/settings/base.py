@@ -17,6 +17,15 @@ def env(name: str, default: str | None = None) -> str:
     return value
 
 
+def env_bool(name: str, default: str) -> bool:
+    value = env(name, default).lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeError(f"Environment variable {name} must be a boolean.")
+
+
 CERBERUS_ENV = env("CERBERUS_ENV", "development")
 CERBERUS_VERSION = env("CERBERUS_VERSION", "0.1.0")
 SECRET_KEY = env("DJANGO_SECRET_KEY", "unsafe-development-secret-key")
@@ -105,6 +114,29 @@ CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TASK_TIME_LIMIT = 30
 CELERY_TASK_SOFT_TIME_LIMIT = 25
+RECOGNITION_IMAGE_METADATA_RETENTION_DAYS = int(
+    env("RECOGNITION_IMAGE_METADATA_RETENTION_DAYS", "30")
+)
+RECOGNITION_EVENT_RETENTION_DAYS = int(env("RECOGNITION_EVENT_RETENTION_DAYS", "180"))
+RECOGNITION_AGGREGATE_AUDIT_RETENTION_DAYS = int(
+    env("RECOGNITION_AGGREGATE_AUDIT_RETENTION_DAYS", "730")
+)
+RECOGNITION_PURGE_BATCH_SIZE = int(env("RECOGNITION_PURGE_BATCH_SIZE", "500"))
+RECOGNITION_PURGE_INTERVAL_SECONDS = int(env("RECOGNITION_PURGE_INTERVAL_SECONDS", "3600"))
+RECOGNITION_RETENTION_ENABLED = env_bool("RECOGNITION_RETENTION_ENABLED", "true")
+RECOGNITION_IMAGE_METADATA_RETENTION_ENABLED = env_bool(
+    "RECOGNITION_IMAGE_METADATA_RETENTION_ENABLED", "true"
+)
+RECOGNITION_EVENT_RETENTION_ENABLED = env_bool("RECOGNITION_EVENT_RETENTION_ENABLED", "true")
+RECOGNITION_AGGREGATE_AUDIT_RETENTION_ENABLED = env_bool(
+    "RECOGNITION_AGGREGATE_AUDIT_RETENTION_ENABLED", "true"
+)
+CELERY_BEAT_SCHEDULE = {
+    "purge-expired-recognition-events": {
+        "task": "domain.tasks.purge_expired_recognition_events",
+        "schedule": RECOGNITION_PURGE_INTERVAL_SECONDS,
+    }
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

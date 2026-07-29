@@ -9,6 +9,7 @@ Cerberus is a parking and vehicle access-control platform. It accepts vehicle-re
 - **PostgreSQL** - persistent application data.
 - **Redis** - cache and Celery broker/result backend.
 - **Celery worker** - asynchronous tasks.
+- **Celery Beat** - schedules the optional recognition-data retention task.
 - **Nginx** - public reverse proxy and static-file server.
 
 The application network is private: only Nginx publishes a host port.
@@ -56,6 +57,25 @@ TEST_ADMIN_PASSWORD=admin-demo-password
 ```
 
 Change the passwords before exposing any environment beyond local development.
+
+## Recognition-data retention
+
+Retention is enabled by default in the local stack and runs hourly. Managers and administrators configure its three independent levels in **Configuration → Data retention**; operators can review the policy without changing it. Image metadata can be cleared after 30 days, full recognition events (and their decisions and queued barrier commands) can be deleted after 180 days, and aggregate cleanup-audit records can be retained for 730 days. Ordinary security-audit records are not deleted by this task.
+
+Configure or disable it in `.env`:
+
+```dotenv
+RECOGNITION_RETENTION_ENABLED=true
+RECOGNITION_IMAGE_METADATA_RETENTION_ENABLED=true
+RECOGNITION_IMAGE_METADATA_RETENTION_DAYS=30
+RECOGNITION_EVENT_RETENTION_ENABLED=true
+RECOGNITION_EVENT_RETENTION_DAYS=180
+RECOGNITION_AGGREGATE_AUDIT_RETENTION_ENABLED=true
+RECOGNITION_AGGREGATE_AUDIT_RETENTION_DAYS=730
+RECOGNITION_PURGE_INTERVAL_SECONDS=3600
+```
+
+These values seed the initial policy when it is first opened. After saving **Configuration → Data retention**, the values in the console take precedence. Set `RECOGNITION_RETENTION_ENABLED=false` to create an initially disabled policy, or change individual `*_ENABLED` defaults.
 
 ## Operator console
 
