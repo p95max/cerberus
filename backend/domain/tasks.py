@@ -120,6 +120,22 @@ def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
 
 
 @shared_task
+def close_due_barrier_commands() -> dict[str, int]:
+    """Reconcile auto-close commands in case an ETA task was lost during a worker restart."""
+    command_ids = list(
+        BarrierCommand.objects.filter(
+            status=BarrierCommand.Status.ACKNOWLEDGED,
+            auto_close_at__isnull=False,
+            auto_close_at__lte=timezone.now(),
+            closed_at__isnull=True,
+        ).values_list("pk", flat=True)[:100]
+    )
+    for command_id in command_ids:
+        close_barrier_after_delay.delay(command_id)
+    return {"scheduled": len(command_ids)}
+
+
+@shared_task
 def purge_expired_recognition_events() -> dict[str, Any]:
     """Remove expired events and image metadata in bounded transactions."""
     now = timezone.now()

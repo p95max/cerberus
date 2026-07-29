@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -17,7 +18,7 @@ from domain.models import (
     ParkingSite,
     RecognitionEvent,
 )
-from domain.tasks import close_barrier_after_delay, dispatch_barrier_command
+from domain.tasks import close_barrier_after_delay, close_due_barrier_commands, dispatch_barrier_command
 
 
 @pytest.fixture
@@ -261,6 +262,24 @@ def test_automatic_barrier_close_is_recorded(
         action="barrier_closed_automatically",
         details__command_id=command.pk,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_due_barrier_command_is_reconciled_after_a_missed_eta_task(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    command = BarrierCommand.objects.create(
+        gate=manual_review_event.camera.gate,
+        requested_by=operator,
+        auto_close_at=timezone.now() - timedelta(seconds=1),
+        status=BarrierCommand.Status.ACKNOWLEDGED,
+    )
+
+    result = close_due_barrier_commands.run()
+
+    command.refresh_from_db()
+    assert result["scheduled"] == 1
+    assert command.status == BarrierCommand.Status.CLOSED
 
 
 @pytest.mark.django_db
