@@ -106,6 +106,7 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .settings-tabs { border-bottom: 1px solid #30363d; display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1.5rem; }
 .settings-tabs a { border-bottom: 2px solid transparent; color: #8ecbff; padding: .6rem .75rem; text-decoration: none; }
 .settings-tabs a[aria-current="page"] { border-bottom-color: #f2cc60; color: #f2cc60; font-weight: 700; }
+.settings-description { color: #8b949e; margin: -0.75rem 0 1.5rem; max-width: 52rem; }
 .detail-grid > div, .management-grid > section, .singleton-settings, .login-card { background: #161b22; border: 1px solid #30363d; border-radius: .5rem; padding: 1.25rem; }
 .retention-policy { display: grid; gap: .45rem 1rem; grid-template-columns: max-content 1fr; }
 .retention-policy dd, .retention-policy dt { margin: 0; }

@@ -431,6 +431,20 @@ RESOURCE_CONFIG: dict[str, tuple[type[Any], type[Any], str, str]] = {
     ),
 }
 
+RESOURCE_DESCRIPTIONS = {
+    "sites": "Parking locations and objects that group the gates used by the access system.",
+    "gates": "Entry and exit points where access decisions are applied.",
+    "cameras": "Recognition cameras connected to a specific gate.",
+    "vehicles": "Known vehicle records used by access lists and rules.",
+    "access-lists": "Allow and deny lists that group vehicle access policies.",
+    "access-rules": (
+        "Defines whether a specific vehicle is allowed or denied at a selected gate; "
+        "priority resolves conflicting rules."
+    ),
+    "retention": "How long recognition data and aggregate cleanup records are retained.",
+    "barrier": "Default automatic-close delay for the mock barrier controller.",
+}
+
 SINGLETON_RESOURCE_DEFAULTS = {
     "retention": retention_policy_defaults,
     "barrier": barrier_control_defaults,
@@ -784,6 +798,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
                 "title": title,
                 "item_label": item_label,
                 "resource": self.kwargs["resource"],
+                "resource_description": RESOURCE_DESCRIPTIONS[self.kwargs["resource"]],
                 "can_manage": self.can_manage(request),
                 "singleton": singleton,
                 "is_singleton_config": singleton is not None,

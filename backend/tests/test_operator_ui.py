@@ -509,6 +509,32 @@ def test_operator_can_view_configuration_but_only_manager_can_change_it(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("resource", "description"),
+    (
+        ("sites", b"Parking locations and objects"),
+        ("gates", b"Entry and exit points"),
+        ("cameras", b"Recognition cameras"),
+        ("vehicles", b"Known vehicle records"),
+        ("access-lists", b"Allow and deny lists"),
+        ("access-rules", b"Defines whether a specific vehicle is allowed or denied"),
+        ("retention", b"How long recognition data"),
+        ("barrier", b"Default automatic-close delay"),
+    ),
+)
+def test_every_configuration_tab_explains_its_purpose(
+    manager: User, resource: str, description: bytes
+) -> None:
+    client = Client()
+    client.force_login(manager)
+
+    response = client.get(f"/operator/manage/{resource}/")
+
+    assert response.status_code == 200
+    assert description in response.content
+
+
+@pytest.mark.django_db
 def test_activity_log_is_filterable_and_sortable_for_managers(
     operator: User, manager: User
 ) -> None:
