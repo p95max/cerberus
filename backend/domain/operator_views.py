@@ -141,8 +141,8 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                 request, "Manual barrier commands are available only for manual-review events."
             )
             return redirect("operator-event-detail", pk=event.pk)
-        if request.POST.get("confirmation") != "OPEN":
-            messages.error(request, "Type OPEN to confirm the manual barrier command.")
+        if request.POST.get("action") != "open":
+            messages.error(request, "Choose Open to queue a manual barrier command.")
             return redirect("operator-event-detail", pk=event.pk)
         command = BarrierCommand.objects.create(
             decision=event.decision,

@@ -9,9 +9,10 @@ from accounts.roles import (
     ROLE_READ_ONLY,
     has_role,
 )
+from domain.models import AccessDecision
 
 
-def operator_permissions(request: Any) -> dict[str, bool]:
+def operator_permissions(request: Any) -> dict[str, Any]:
     role = None
     for candidate in (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ROLE_READ_ONLY):
         if has_role(request.user, (candidate,)):
@@ -23,4 +24,9 @@ def operator_permissions(request: Any) -> dict[str, bool]:
             (ROLE_ADMINISTRATOR, ROLE_MANAGER),
         ),
         "current_operator_role": role,
+        "manual_review_count": (
+            AccessDecision.objects.filter(outcome=AccessDecision.Outcome.MANUAL_REVIEW).count()
+            if request.user.is_authenticated
+            else 0
+        ),
     }

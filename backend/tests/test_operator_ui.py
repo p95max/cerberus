@@ -61,6 +61,8 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert b"A123BC77" in response.content
     assert b"Manual review" in response.content
     assert b"Apply filters" in response.content
+    assert b'aria-current="page">Events' in response.content
+    assert b"events awaiting manual review">1<" in response.content
 
 
 @pytest.mark.django_db
@@ -70,8 +72,8 @@ def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     client = Client()
     client.force_login(operator)
     detail = client.get(f"/operator/events/{manual_review_event.pk}/")
-    rejected = client.post(f"/operator/events/{manual_review_event.pk}/", {"confirmation": "no"})
-    accepted = client.post(f"/operator/events/{manual_review_event.pk}/", {"confirmation": "OPEN"})
+    rejected = client.post(f"/operator/events/{manual_review_event.pk}/", {"action": "close"})
+    accepted = client.post(f"/operator/events/{manual_review_event.pk}/", {"action": "open"})
 
     assert detail.status_code == 200
     assert b"No matching access rule." in detail.content

@@ -7,6 +7,9 @@ a { color: #8ecbff; }
 .brand img { border-radius: .3rem; display: block; height: 1.875rem; width: 1.875rem; }
 nav { display: flex; flex: 1; gap: 1rem; }
 nav a { text-decoration: none; }
+nav a.active { color: #f2cc60; font-weight: 700; }
+.nav-badge { background: #30363d; border-radius: 999px; color: #e6edf3; display: inline-block; font-size: .72rem; line-height: 1; margin-left: .25rem; min-width: 1.35rem; padding: .22rem .35rem; text-align: center; }
+nav a.active .nav-badge { background: #f2cc60; color: #0d1117; }
 .signed-in { color: #8b949e; font-size: .85rem; white-space: nowrap; }
 .link-button { background: transparent; border: 0; color: #8ecbff; cursor: pointer; padding: 0; }
 .page { margin: 0 auto; max-width: 1280px; padding: 2rem 1rem 3rem; }

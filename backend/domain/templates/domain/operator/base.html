@@ -13,10 +13,10 @@
       <a class="brand" href="{% url 'operator-dashboard' %}"><img src="/favicon.png" alt="" width="30" height="30">CERBERUS</a>
       {% if user.is_authenticated %}
         <nav>
-          <a href="{% url 'operator-dashboard' %}">Events</a>
-          <a href="{% url 'manual-review-queue' %}">Manual review</a>
+          <a href="{% url 'operator-dashboard' %}" {% if request.resolver_match.url_name == 'operator-dashboard' or request.resolver_match.url_name == 'operator-event-detail' %}class="active" aria-current="page"{% endif %}>Events</a>
+          <a href="{% url 'manual-review-queue' %}" {% if request.resolver_match.url_name == 'manual-review-queue' %}class="active" aria-current="page"{% endif %}>Manual review <span class="nav-badge" aria-label="{{ manual_review_count }} events awaiting manual review">{{ manual_review_count }}</span></a>
           {% if can_manage_configuration %}
-            <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
+            <a href="{% url 'manage-resource' 'sites' %}" {% if request.resolver_match.url_name == 'manage-resource' or request.resolver_match.url_name == 'update-resource' %}class="active" aria-current="page"{% endif %}>Configuration</a>
           {% endif %}
         </nav>
         <span class="signed-in">Signed in as {{ user.username }} · {{ current_operator_role }}</span>
