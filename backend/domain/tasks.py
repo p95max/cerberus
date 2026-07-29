@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from accounts.models import AuditLog
 from domain.models import AccessDecision, BarrierCommand, RecognitionEvent
+from domain.services.barrier import BarrierControllerError, get_barrier_controller
 from domain.services.retention import get_retention_policy
 
 AGGREGATE_RETENTION_AUDIT_ACTIONS = (
@@ -20,13 +21,78 @@ AGGREGATE_RETENTION_AUDIT_ACTIONS = (
 
 
 @shared_task
+def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
+    """Send one command to the controller and schedule bounded retries on failure."""
+    with transaction.atomic():
+        command = (
+            BarrierCommand.objects.select_for_update()
+            .select_related("decision")
+            .get(pk=command_id)
+        )
+        if command.status not in {BarrierCommand.Status.PENDING, BarrierCommand.Status.SENT}:
+            return {"command_id": command.pk, "status": command.status}
+
+        command.attempt_count += 1
+        command.status = BarrierCommand.Status.SENT
+        command.retry_after = None
+        command.save(update_fields=("attempt_count", "status", "retry_after", "updated_at"))
+
+        try:
+            result = get_barrier_controller().open(
+                command,
+                timeout_seconds=settings.BARRIER_CONTROLLER_TIMEOUT_SECONDS,
+            )
+        except BarrierControllerError as error:
+            command.last_error = str(error)
+            if command.attempt_count < settings.BARRIER_COMMAND_MAX_RETRIES:
+                command.status = BarrierCommand.Status.PENDING
+                command.retry_after = timezone.now() + timedelta(
+                    seconds=settings.BARRIER_COMMAND_RETRY_DELAY_SECONDS
+                )
+                command.save(
+                    update_fields=("status", "retry_after", "last_error", "updated_at")
+                )
+                AuditLog.objects.create(
+                    action="barrier_command_retry_scheduled",
+                    details={"event_id": command.decision.event_id, "command_id": command.pk},
+                )
+                if not settings.CELERY_TASK_ALWAYS_EAGER:
+                    dispatch_barrier_command.apply_async(
+                        args=[command.pk],
+                        eta=command.retry_after,
+                    )
+                return {"command_id": command.pk, "status": command.status}
+
+            command.status = BarrierCommand.Status.FAILED
+            command.retry_after = None
+            command.save(update_fields=("status", "retry_after", "last_error", "updated_at"))
+            AuditLog.objects.create(
+                action="barrier_command_failed",
+                details={"event_id": command.decision.event_id, "command_id": command.pk},
+            )
+            return {"command_id": command.pk, "status": command.status}
+
+        if not result.acknowledged:
+            raise RuntimeError("Barrier controller did not acknowledge the command.")
+        command.status = BarrierCommand.Status.ACKNOWLEDGED
+        command.last_error = ""
+        command.save(update_fields=("status", "last_error", "updated_at"))
+        AuditLog.objects.create(
+            action="barrier_command_acknowledged",
+            details={"event_id": command.decision.event_id, "command_id": command.pk},
+        )
+        close_barrier_after_delay.apply_async(args=[command.pk], eta=command.auto_close_at)
+    return {"command_id": command.pk, "status": command.status}
+
+
+@shared_task
 def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
     """Mark a mock barrier command closed and leave an auditable event history."""
     with transaction.atomic():
         command = (
             BarrierCommand.objects.select_for_update().select_related("decision").get(pk=command_id)
         )
-        if command.closed_at is not None:
+        if command.closed_at is not None or command.status != BarrierCommand.Status.ACKNOWLEDGED:
             return {"command_id": command.pk, "status": command.status}
 
         command.status = BarrierCommand.Status.CLOSED

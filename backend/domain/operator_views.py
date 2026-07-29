@@ -43,7 +43,7 @@ from domain.models import (
 )
 from domain.services.barrier import barrier_auto_close_seconds, barrier_control_defaults
 from domain.services.retention import retention_policy_defaults
-from domain.tasks import close_barrier_after_delay
+from domain.tasks import dispatch_barrier_command
 
 
 class OperatorLoginView(LoginView):
@@ -150,14 +150,32 @@ class EventDetailView(OperatorAccessMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context["audit_history"] = AuditLog.objects.filter(details__event_id=self.object.pk)
+        latest_barrier_command = self.object.decision.barrier_commands.order_by("-created_at").first()
         context["active_barrier_command"] = (
             self.object.decision.barrier_commands.filter(
-                status=BarrierCommand.Status.PENDING,
+                status__in=(
+                    BarrierCommand.Status.PENDING,
+                    BarrierCommand.Status.SENT,
+                    BarrierCommand.Status.ACKNOWLEDGED,
+                ),
                 auto_close_at__isnull=False,
             )
             .order_by("-created_at")
             .first()
         )
+        barrier_status, barrier_status_label = "closed", "Closed"
+        if latest_barrier_command is not None:
+            if latest_barrier_command.status == BarrierCommand.Status.ACKNOWLEDGED:
+                barrier_status, barrier_status_label = "open", "Open"
+            elif latest_barrier_command.status in {
+                BarrierCommand.Status.PENDING,
+                BarrierCommand.Status.SENT,
+            }:
+                barrier_status, barrier_status_label = "transition", "Opening"
+            elif latest_barrier_command.status == BarrierCommand.Status.FAILED:
+                barrier_status, barrier_status_label = "failed", "Controller error"
+        context["barrier_status"] = barrier_status
+        context["barrier_status_label"] = barrier_status_label
         return context
 
     def post(self, request: HttpRequest, pk: int) -> HttpResponse:
@@ -173,7 +191,11 @@ class EventDetailView(OperatorAccessMixin, DetailView):
             messages.error(request, "Choose Open to queue a manual barrier command.")
             return redirect("operator-event-detail", pk=event.pk)
         active_command = event.decision.barrier_commands.filter(
-            status=BarrierCommand.Status.PENDING
+            status__in=(
+                BarrierCommand.Status.PENDING,
+                BarrierCommand.Status.SENT,
+                BarrierCommand.Status.ACKNOWLEDGED,
+            )
         ).order_by("-created_at").first()
         if active_command is not None:
             messages.error(
@@ -202,9 +224,7 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                 "auto_close_at": auto_close_at.isoformat(),
             },
         )
-        transaction.on_commit(
-            lambda: close_barrier_after_delay.apply_async(args=[command.pk], eta=auto_close_at)
-        )
+        transaction.on_commit(lambda: dispatch_barrier_command.delay(command.pk))
         messages.success(
             request,
             "Barrier opened in the mock controller; automatic close is scheduled.",

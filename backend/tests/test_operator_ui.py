@@ -4,13 +4,20 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import Group
-from django.test import Client
+from django.test import Client, override_settings
 from django.utils import timezone
 
 from accounts.models import AuditLog, User
 from accounts.roles import ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
-from domain.models import AccessDecision, Camera, Gate, ParkingSite, RecognitionEvent
-from domain.tasks import close_barrier_after_delay
+from domain.models import (
+    AccessDecision,
+    BarrierCommand,
+    Camera,
+    Gate,
+    ParkingSite,
+    RecognitionEvent,
+)
+from domain.tasks import close_barrier_after_delay, dispatch_barrier_command
 
 
 @pytest.fixture
@@ -126,6 +133,7 @@ def test_automatic_barrier_close_is_recorded(
         gate=manual_review_event.camera.gate,
         requested_by=operator,
         auto_close_at=timezone.now(),
+        status=BarrierCommand.Status.ACKNOWLEDGED,
     )
 
     result = close_barrier_after_delay.run(command.pk)
@@ -138,6 +146,47 @@ def test_automatic_barrier_close_is_recorded(
         action="barrier_closed_automatically",
         details__command_id=command.pk,
     ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(MOCK_BARRIER_AVAILABLE=False, BARRIER_COMMAND_MAX_RETRIES=1)
+def test_unavailable_barrier_controller_marks_command_failed(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    command = manual_review_event.decision.barrier_commands.create(
+        gate=manual_review_event.camera.gate,
+        requested_by=operator,
+        auto_close_at=timezone.now(),
+    )
+
+    result = dispatch_barrier_command.run(command.pk)
+
+    command.refresh_from_db()
+    assert result["status"] == "failed"
+    assert command.last_error == "Mock barrier controller is unavailable."
+    assert AuditLog.objects.filter(action="barrier_command_failed").exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    MOCK_BARRIER_DELAY_SECONDS=4,
+    BARRIER_CONTROLLER_TIMEOUT_SECONDS=3,
+    BARRIER_COMMAND_MAX_RETRIES=1,
+)
+def test_slow_barrier_controller_times_out(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    command = manual_review_event.decision.barrier_commands.create(
+        gate=manual_review_event.camera.gate,
+        requested_by=operator,
+        auto_close_at=timezone.now(),
+    )
+
+    dispatch_barrier_command.run(command.pk)
+
+    command.refresh_from_db()
+    assert command.status == "failed"
+    assert command.last_error == "Mock barrier controller timed out."
 
 
 @pytest.mark.django_db

@@ -48,6 +48,14 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .event-facts dd, .event-facts dt { margin: 0; }
 .event-facts dt { color: #8b949e; font-size: .75rem; margin-bottom: .25rem; text-transform: uppercase; }
 .barrier-timer { background: #1b5e3a; border: 1px solid #2ea043; border-radius: .5rem; margin: 1rem 0; padding: .9rem; }
+.barrier-heading { align-items: baseline; display: flex; gap: 1rem; justify-content: space-between; }
+.barrier-heading h2 { margin: 0; }
+.barrier-status { align-items: center; display: flex; gap: .45rem; }
+.barrier-led { background: #8b949e; border-radius: 50%; box-shadow: 0 0 .35rem currentColor; display: inline-block; height: .7rem; width: .7rem; }
+.barrier-led.open { background: #3fb950; color: #3fb950; }
+.barrier-led.transition { animation: barrier-pulse 1s infinite; background: #f2cc60; color: #f2cc60; }
+.barrier-led.failed { background: #f85149; color: #f85149; }
+@keyframes barrier-pulse { 50% { opacity: .35; } }
 .barrier-timer strong { display: block; font-size: 1.35rem; margin-top: .3rem; }
 .barrier-timer p { color: #b7f7ca; margin: .4rem 0 0; }
 .management-grid.read-only { grid-template-columns: 1fr; }

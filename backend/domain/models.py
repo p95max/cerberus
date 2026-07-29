@@ -205,6 +205,9 @@ class BarrierCommand(TimeStampedModel):
     idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     auto_close_at = models.DateTimeField(blank=True, null=True)
     closed_at = models.DateTimeField(blank=True, null=True)
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    retry_after = models.DateTimeField(blank=True, null=True)
+    last_error = models.CharField(max_length=255, blank=True)
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL
     )
