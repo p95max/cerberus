@@ -43,6 +43,9 @@ services:
       CREATE_TEST_OPERATOR: ${CREATE_TEST_OPERATOR:-true}
       TEST_OPERATOR_USERNAME: ${TEST_OPERATOR_USERNAME:-operator}
       TEST_OPERATOR_PASSWORD: ${TEST_OPERATOR_PASSWORD:-operator-demo-password}
+      CREATE_TEST_ADMIN: ${CREATE_TEST_ADMIN:-true}
+      TEST_ADMIN_USERNAME: ${TEST_ADMIN_USERNAME:-admin}
+      TEST_ADMIN_PASSWORD: ${TEST_ADMIN_PASSWORD:-admin-demo-password}
     depends_on:
       postgres:
         condition: service_healthy

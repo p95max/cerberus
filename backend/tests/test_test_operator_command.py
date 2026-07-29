@@ -38,3 +38,18 @@ def test_ensure_test_operator_assigns_role_to_existing_user(
 
     user = User.objects.get(username="existing-operator")
     assert user.groups.filter(name=ROLE_OPERATOR).exists()
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_ensure_test_operator_creates_administrator(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CREATE_TEST_OPERATOR", "false")
+    monkeypatch.setenv("CREATE_TEST_ADMIN", "true")
+    monkeypatch.setenv("TEST_ADMIN_USERNAME", "test-admin")
+    monkeypatch.setenv("TEST_ADMIN_PASSWORD", "test-admin-password")
+
+    call_command("ensure_test_operator")
+
+    user = User.objects.get(username="test-admin")
+    assert user.check_password("test-admin-password")
+    assert user.groups.filter(name="Administrator").exists()

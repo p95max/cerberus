@@ -14,9 +14,15 @@
         <nav>
           <a href="{% url 'operator-dashboard' %}">Events</a>
           <a href="{% url 'manual-review-queue' %}">Manual review</a>
-          <a href="{% url 'manage-resource' 'vehicles' %}">Vehicles</a>
-          <a href="{% url 'manage-resource' 'access-rules' %}">Access rules</a>
-          <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
+          {% if can_manage_configuration %}
+            <a href="{% url 'manage-resource' 'vehicles' %}">Vehicles</a>
+            <a href="{% url 'manage-resource' 'access-rules' %}">Access rules</a>
+            <a href="{% url 'manage-resource' 'sites' %}">Configuration</a>
+          {% else %}
+            <span class="nav-disabled" aria-disabled="true" title="Manager role required">Vehicles</span>
+            <span class="nav-disabled" aria-disabled="true" title="Manager role required">Access rules</span>
+            <span class="nav-disabled" aria-disabled="true" title="Manager role required">Configuration</span>
+          {% endif %}
         </nav>
         <form action="{% url 'operator-logout' %}" method="post">{% csrf_token %}<button class="link-button">Sign out</button></form>
       {% endif %}
