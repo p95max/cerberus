@@ -9,7 +9,13 @@ from django.test import Client, override_settings
 from django.utils import timezone
 
 from accounts.models import AuditLog, User
-from accounts.roles import ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
+from accounts.roles import (
+    ROLE_ADMINISTRATOR,
+    ROLE_MANAGER,
+    ROLE_OPERATOR,
+    ROLE_READ_ONLY,
+    ensure_role_groups,
+)
 from domain.models import (
     AccessDecision,
     BarrierCommand,
@@ -40,8 +46,16 @@ def manager() -> User:
 @pytest.fixture
 def administrator() -> User:
     ensure_role_groups()
-    user = User.objects.create_user(username="admin-ui", password="password")
+    user = User.objects.create_superuser(username="admin-ui", password="password")
     user.groups.add(Group.objects.get(name=ROLE_ADMINISTRATOR))
+    return user
+
+
+@pytest.fixture
+def read_only() -> User:
+    ensure_role_groups()
+    user = User.objects.create_user(username="read-only-ui", password="password")
+    user.groups.add(Group.objects.get(name=ROLE_READ_ONLY))
     return user
 
 
@@ -63,6 +77,121 @@ def manual_review_event() -> RecognitionEvent:
     )
     AuditLog.objects.create(action="recognition_event_received", details={"event_id": event.pk})
     return event
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("account_fixture", "expected_statuses"),
+    [
+        pytest.param(
+            "operator",
+            {
+                "dashboard": 200,
+                "manual_review": 200,
+                "barrier_control": 200,
+                "configuration": 200,
+                "activity_log": 403,
+                "activity_export": 403,
+                "django_admin": 302,
+            },
+            id="operator",
+        ),
+        pytest.param(
+            "manager",
+            {
+                "dashboard": 200,
+                "manual_review": 200,
+                "barrier_control": 200,
+                "configuration": 200,
+                "activity_log": 200,
+                "activity_export": 403,
+                "django_admin": 302,
+            },
+            id="manager",
+        ),
+        pytest.param(
+            "administrator",
+            {
+                "dashboard": 200,
+                "manual_review": 200,
+                "barrier_control": 200,
+                "configuration": 200,
+                "activity_log": 200,
+                "activity_export": 200,
+                "django_admin": 200,
+            },
+            id="administrator",
+        ),
+        pytest.param(
+            "read_only",
+            {
+                "dashboard": 200,
+                "manual_review": 200,
+                "barrier_control": 403,
+                "configuration": 200,
+                "activity_log": 403,
+                "activity_export": 403,
+                "django_admin": 302,
+            },
+            id="read-only",
+        ),
+    ],
+)
+def test_console_access_matrix_by_account_type(
+    request: pytest.FixtureRequest,
+    account_fixture: str,
+    expected_statuses: dict[str, int],
+) -> None:
+    client = Client()
+    client.force_login(request.getfixturevalue(account_fixture))
+
+    routes = {
+        "dashboard": "/operator/",
+        "manual_review": "/operator/manual-review/",
+        "barrier_control": "/operator/barrier-control/",
+        "configuration": "/operator/manage/sites/",
+        "activity_log": "/operator/activity-log/",
+        "activity_export": "/operator/activity-log/export/",
+        "django_admin": "/admin/",
+    }
+    statuses = {name: client.get(path).status_code for name, path in routes.items()}
+
+    assert statuses == expected_statuses
+    dashboard = client.get(routes["dashboard"])
+    assert (b"Activity log" in dashboard.content) is (expected_statuses["activity_log"] == 200)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("account_fixture", "expected_status"),
+    [
+        pytest.param("operator", 403, id="operator"),
+        pytest.param("manager", 302, id="manager"),
+        pytest.param("administrator", 302, id="administrator"),
+        pytest.param("read_only", 403, id="read-only"),
+    ],
+)
+def test_configuration_write_access_matrix_by_account_type(
+    request: pytest.FixtureRequest,
+    account_fixture: str,
+    expected_status: int,
+) -> None:
+    client = Client()
+    client.force_login(request.getfixturevalue(account_fixture))
+    external_id = f"access-matrix-{account_fixture}"
+
+    response = client.post(
+        "/operator/manage/sites/",
+        {
+            "external_id": external_id,
+            "name": "Access matrix site",
+            "address": "Test address",
+            "is_active": "on",
+        },
+    )
+
+    assert response.status_code == expected_status
+    assert ParkingSite.objects.filter(external_id=external_id).exists() is (expected_status == 302)
 
 
 @pytest.mark.django_db
