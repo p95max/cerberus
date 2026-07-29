@@ -81,6 +81,7 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .barrier-case h2 { margin: .35rem 0; }
 .barrier-case > p:not(.section-kicker):not(.decision-reason) { color: #8b949e; margin: .1rem 0 1rem; }
 .barrier-case .decision-reason { flex: 1; font-size: .9rem; }
+.barrier-case-persistent { background: #742d3533; border-color: #f85149; }
 .barrier-control-panel { align-items: center; background: #161b22; border: 1px solid #30363d; border-radius: .5rem; display: flex; gap: 1.5rem; justify-content: space-between; max-width: 52rem; padding: 1.5rem; }
 .barrier-control-panel h2 { margin: .3rem 0 .6rem; }
 .barrier-control-panel p:last-child { color: #8b949e; margin-bottom: 0; }
@@ -120,6 +121,15 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .activity-log-filters { align-items: end; }
 .audit-details { color: #8b949e; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .8rem; max-width: 30rem; overflow-wrap: anywhere; }
 .command-reference { background: #1f6feb24; border: 1px solid #1f6feb; border-radius: 999px; color: #8ecbff; display: inline-block; font-size: .8rem; font-weight: 700; padding: .25rem .5rem; white-space: nowrap; }
+.indefinite-opening-row { background: #742d3533; }
+.indefinite-opening-row td:first-child { border-left: 3px solid #f85149; }
+.event-linked-opening-row { background: #1f6feb24; }
+.event-linked-opening-row td:first-child { border-left: 3px solid #58a6ff; }
+.independent-opening-row { background: #624d142b; }
+.independent-opening-row td:first-child { border-left: 3px solid #d29922; }
+.clickable-row.event-linked-opening-row:hover, .clickable-row.independent-opening-row:hover, .clickable-row.indefinite-opening-row:hover { filter: brightness(1.2); }
+.command-reference-danger { background: #742d35; border-color: #f85149; color: #ffc1c7; }
+.activity-icon { margin-right: .3rem; }
 .resource-detail { background: #161b22; border: 1px solid #30363d; border-radius: .5rem; max-width: 44rem; padding: 1.25rem; }
 .audit-opened { background: #1b5e3a33; border-left-color: #3fb950; }
 .audit-opened .audit-icon { background: #1b5e3a; color: #b7f7ca; }

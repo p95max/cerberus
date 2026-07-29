@@ -41,7 +41,11 @@ class EmergencyBarrierOpenForm(ManualBarrierOpenForm):
         queryset=Gate.objects.filter(is_active=True).select_related("site"),
         label="Gate",
     )
-    request_reference = forms.CharField(max_length=120, label="Request or ticket number")
+    request_reference = forms.CharField(
+        max_length=120,
+        required=False,
+        label="Request or ticket number (optional)",
+    )
     duration_mode = forms.ChoiceField(choices=DURATION_CHOICES, initial="timed", label="Opening mode")
     auto_close_seconds = forms.IntegerField(
         min_value=1,

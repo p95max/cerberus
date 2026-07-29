@@ -506,8 +506,20 @@ class ActivityLogView(OperatorAccessMixin, View):
         entry.action_label = self.action_labels.get(
             entry.action, entry.action.replace("_", " ").capitalize()
         )
+        entry.action_icon = (
+            "🔓"
+            if entry.action in {"manual_barrier_command_requested", "emergency_barrier_command_requested"}
+            else "🔒"
+            if entry.action in {"barrier_closed_automatically", "barrier_closed_manually"}
+            else ""
+        )
         entry.event_id = details.get("event_id")
         entry.command_id = details.get("command_id")
+        entry.is_indefinite_opening = details.get("opening_mode") == "indefinite"
+        entry.is_event_linked_opening = (
+            entry.action == "manual_barrier_command_requested" and bool(entry.event_id)
+        )
+        entry.is_independent_opening = entry.action == "emergency_barrier_command_requested"
         detail_labels = {
             "auto_close_at": "Auto-close",
             "auto_close_seconds": "Close after",
@@ -533,6 +545,23 @@ class ActivityLogView(OperatorAccessMixin, View):
                 except (TypeError, ValueError):
                     pass
             entry.detail_lines.append(f"{detail_labels[key]}: {value}")
+
+
+class BarrierCommandDetailView(OperatorAccessMixin, DetailView):
+    model = BarrierCommand
+    template_name = "domain/operator/barrier_command_detail.html"
+    context_object_name = "command"
+
+    def get_queryset(self) -> QuerySet[BarrierCommand]:
+        return BarrierCommand.objects.select_related("gate__site", "requested_by", "decision__event")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["reason_label"] = dict(ManualBarrierOpenForm.REASON_CHOICES).get(
+            self.object.manual_reason, self.object.manual_reason or "—"
+        )
+        context["audit_history"] = AuditLog.objects.filter(details__command_id=self.object.pk)
+        return context
 
 
 class ResourceManagementView(OperatorAccessMixin, View):

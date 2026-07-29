@@ -21,7 +21,11 @@ def operator_permissions(request: Any) -> dict[str, Any]:
     persistent_open_barriers = (
         list(
             BarrierCommand.objects.filter(
-                status=BarrierCommand.Status.ACKNOWLEDGED,
+                status__in=(
+                    BarrierCommand.Status.PENDING,
+                    BarrierCommand.Status.SENT,
+                    BarrierCommand.Status.ACKNOWLEDGED,
+                ),
                 auto_close_at__isnull=True,
             ).select_related("gate__site")
         )

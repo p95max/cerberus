@@ -1,0 +1,7 @@
+{% extends "domain/operator/base.html" %}
+{% block content %}
+  <p><a href="{% url 'operator-activity-log' %}">← Back to activity log</a></p>
+  <div class="page-heading"><div><p class="eyebrow">Independent barrier command #{{ command.pk }}</p><h1>{{ command.gate.site.name }} · {{ command.gate.name }}</h1></div><span class="status {{ command.status }}">{{ command.get_status_display }}</span></div>
+  <section class="resource-detail"><dl class="retention-policy"><dt>Request</dt><dd>{{ command.request_reference|default:"—" }}</dd><dt>Reason</dt><dd>{{ reason_label }}</dd><dt>Comment</dt><dd>{{ command.manual_comment|default:"—" }}</dd><dt>Requested by</dt><dd>{{ command.requested_by.username|default:"System" }}</dd><dt>Opened</dt><dd>{{ command.created_at|date:"Y-m-d H:i:s T" }}</dd><dt>Automatic close</dt><dd>{% if command.auto_close_at %}{{ command.auto_close_at|date:"Y-m-d H:i:s T" }}{% else %}Manual close required{% endif %}</dd></dl></section>
+  <section><h2>Command history</h2><ul class="audit-list">{% for item in audit_history %}<li class="audit-item"><div><strong>{{ item.created_at|date:"Y-m-d H:i:s T" }}</strong><span class="audit-action">{{ item.action }}{% if item.actor %} by {{ item.actor.username }}{% endif %}</span></div></li>{% empty %}<li>No audit records are available for this command.</li>{% endfor %}</ul></section>
+{% endblock %}
