@@ -227,6 +227,7 @@ def test_operator_can_keep_an_urgent_barrier_command_open_until_manual_close(
     assert command.auto_close_at is None
     page = client.get("/operator/barrier-control/")
     assert b"Open until closed manually" in page.content
+    assert b"Barrier open without a timer" in page.content
 
     close_response = client.post(
         "/operator/barrier-control/", {"action": "close", "command_id": command.pk}

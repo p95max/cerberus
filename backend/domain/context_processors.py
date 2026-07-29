@@ -9,7 +9,7 @@ from accounts.roles import (
     ROLE_READ_ONLY,
     has_role,
 )
-from domain.models import AccessDecision
+from domain.models import AccessDecision, BarrierCommand
 
 
 def operator_permissions(request: Any) -> dict[str, Any]:
@@ -18,6 +18,16 @@ def operator_permissions(request: Any) -> dict[str, Any]:
         if has_role(request.user, (candidate,)):
             role = candidate
             break
+    persistent_open_barriers = (
+        list(
+            BarrierCommand.objects.filter(
+                status=BarrierCommand.Status.ACKNOWLEDGED,
+                auto_close_at__isnull=True,
+            ).select_related("gate__site")
+        )
+        if request.user.is_authenticated
+        else []
+    )
     return {
         "can_manage_configuration": has_role(
             request.user,
@@ -40,4 +50,5 @@ def operator_permissions(request: Any) -> dict[str, Any]:
             if request.user.is_authenticated
             else 0
         ),
+        "persistent_open_barriers": persistent_open_barriers,
     }
