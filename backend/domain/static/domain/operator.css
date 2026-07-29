@@ -6,7 +6,6 @@ a { color: #8ecbff; }
 .brand { color: #f2cc60; font-weight: 800; letter-spacing: .12em; text-decoration: none; }
 nav { display: flex; flex: 1; gap: 1rem; }
 nav a { text-decoration: none; }
-.nav-disabled { color: #6e7681; cursor: not-allowed; text-decoration: none; }
 .link-button { background: transparent; border: 0; color: #8ecbff; cursor: pointer; padding: 0; }
 .page { margin: 0 auto; max-width: 1280px; padding: 2rem 1rem 3rem; }
 .page-heading { align-items: center; display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
