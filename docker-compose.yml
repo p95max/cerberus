@@ -32,6 +32,10 @@ services:
   backend:
     build:
       context: ./backend
+    develop:
+      watch:
+        - action: rebuild
+          path: ./backend
     environment:
       CERBERUS_ENV: development
       DJANGO_SETTINGS_MODULE: config.settings.development
@@ -64,6 +68,10 @@ services:
   celery_worker:
     build:
       context: ./backend
+    develop:
+      watch:
+        - action: rebuild
+          path: ./backend
     command: celery -A config worker --loglevel=INFO
     environment:
       CERBERUS_ENV: development
@@ -84,6 +92,10 @@ services:
   janus:
     build:
       context: ./janus
+    develop:
+      watch:
+        - action: rebuild
+          path: ./janus
     environment:
       JANUS_ENV: development
     healthcheck:
@@ -97,6 +109,10 @@ services:
   nginx:
     build:
       context: ./nginx
+    develop:
+      watch:
+        - action: rebuild
+          path: ./nginx
     ports:
       - "${NGINX_PORT:-8080}:80"
     depends_on:

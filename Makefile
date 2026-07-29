@@ -1,9 +1,9 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install lint format typecheck test check up down logs
+.PHONY: help install lint format typecheck test check up watch down logs
 
 help:
-	@echo "Available targets: install lint format typecheck test check up down logs"
+	@echo "Available targets: install lint format typecheck test check up watch down logs"
 
 install:
 	poetry -C backend install --no-root
@@ -29,7 +29,10 @@ test:
 check: lint typecheck test
 
 up:
-	docker compose up --build
+	docker compose up --build --watch
+
+watch:
+	docker compose up --watch
 
 down:
 	docker compose down
