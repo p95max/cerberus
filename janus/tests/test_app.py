@@ -1,13 +1,20 @@
 import pytest
 from fastapi.testclient import TestClient
 
+import janus_service.app as app_module
 from janus_service.app import app
-from janus_service.recognition import recognition_result_from_tesseract_data
+from janus_service.recognition import MockRecognitionEngine, recognition_result_from_tesseract_data
 from janus_service.schemas import BoundingBox, RecognitionResponse, RecognitionStatus
 from janus_service.settings import settings
 
 client = TestClient(app)
 AUTH_HEADERS = {"X-API-Key": settings.api_key}
+
+
+@pytest.fixture(autouse=True)
+def use_mock_engine_for_api_contract_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep API-contract tests independent from the configured runtime OCR backend."""
+    monkeypatch.setattr(app_module, "engine", MockRecognitionEngine())
 
 
 def test_health_readiness_and_version_endpoints() -> None:
