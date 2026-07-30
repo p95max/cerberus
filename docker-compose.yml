@@ -157,6 +157,7 @@ services:
   janus:
     build:
       context: ./janus
+      target: development
     develop:
       watch:
         - action: rebuild

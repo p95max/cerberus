@@ -64,12 +64,14 @@ The development backend image includes the test dependencies. After changing the
 dependencies, rebuild it once, then run the test suite inside the container:
 
 ```bash
-docker compose up --build -d backend
+docker compose up --build -d backend janus
 docker compose exec backend pytest
+docker compose exec janus pytest
 ```
 
-The command uses the isolated SQLite test settings (`config.settings.test`), not the running
-development database.
+The backend command uses the isolated SQLite test settings (`config.settings.test`), not the
+running development database. The Compose configuration uses Janus's development image, which
+contains its test dependencies; the production image remains limited to runtime dependencies.
 
 ## Local users and demo data
 

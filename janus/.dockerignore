@@ -23,6 +23,5 @@ dist/
 *.sqlite3
 *.db
 *.log
-tests/
 .DS_Store
 Thumbs.db
