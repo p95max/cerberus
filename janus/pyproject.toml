@@ -10,6 +10,8 @@ python = ">=3.12,<3.14"
 fastapi = "^0.115.0"
 uvicorn = { version = "^0.30.0", extras = ["standard"] }
 python-multipart = "^0.0.12"
+pillow = "^10.4.0"
+pytesseract = "^0.3.13"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.0"

@@ -23,6 +23,12 @@ response schema. The current `mock` engine is deterministic: upload
 candidate; any other valid image name returns `not_detected`. It never makes an
 access decision.
 
+For an image already cropped to a single licence plate, set
+`JANUS_RECOGNITION_BACKEND=tesseract`. The image includes the Tesseract binary and
+its Python dependencies; Janus returns Tesseract word candidates and bounding boxes.
+Candidate normalization, confidence thresholds and full-frame plate detection are
+added in the following Phase 11 steps.
+
 | Internal endpoint | Purpose |
 | --- | --- |
 | `/healthz` | Liveness check |

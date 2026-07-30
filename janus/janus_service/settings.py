@@ -23,8 +23,8 @@ class Settings:
         if processing_timeout_seconds <= 0:
             raise ValueError("JANUS_PROCESSING_TIMEOUT_SECONDS must be positive")
         recognition_backend = os.getenv("JANUS_RECOGNITION_BACKEND", "mock")
-        if recognition_backend != "mock":
-            raise ValueError("JANUS_RECOGNITION_BACKEND must be mock until an OCR backend is added")
+        if recognition_backend not in {"mock", "tesseract"}:
+            raise ValueError("JANUS_RECOGNITION_BACKEND must be mock or tesseract")
         return cls(
             environment=os.getenv("JANUS_ENV", "development"),
             api_key=os.getenv("JANUS_API_KEY", "janus-local-development-key"),

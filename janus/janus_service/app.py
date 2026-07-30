@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile, status
 from starlette.responses import Response
 
-from janus_service.recognition import MockRecognitionEngine, RecognitionResult
+from janus_service.recognition import RecognitionResult, build_recognition_engine
 from janus_service.schemas import RecognitionResponse
 from janus_service.settings import settings
 
@@ -48,7 +48,7 @@ def configure_logging() -> None:
 
 configure_logging()
 app = FastAPI(title="Janus recognition service", version=VERSION)
-engine = MockRecognitionEngine()
+engine = build_recognition_engine(settings.recognition_backend)
 
 
 @app.middleware("http")
