@@ -38,9 +38,7 @@ def dispatch_barrier_command(command_id: int) -> dict[str, Any]:
     """Send one command to the controller and schedule bounded retries on failure."""
     with transaction.atomic():
         command = (
-            BarrierCommand.objects.select_for_update()
-            .select_related("decision", "gate")
-            .get(pk=command_id)
+            BarrierCommand.objects.select_for_update().get(pk=command_id)
         )
         if command.status not in {BarrierCommand.Status.PENDING, BarrierCommand.Status.SENT}:
             return {"command_id": command.pk, "status": command.status}
@@ -104,7 +102,7 @@ def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
     """Mark a mock barrier command closed and leave an auditable event history."""
     with transaction.atomic():
         command = (
-            BarrierCommand.objects.select_for_update().select_related("decision", "gate").get(pk=command_id)
+            BarrierCommand.objects.select_for_update().get(pk=command_id)
         )
         if command.closed_at is not None or command.status != BarrierCommand.Status.ACKNOWLEDGED:
             return {"command_id": command.pk, "status": command.status}
