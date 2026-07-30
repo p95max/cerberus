@@ -24,3 +24,10 @@ def test_openapi_schema_and_swagger_ui_are_available() -> None:
 
     assert client.get("/api/schema/").status_code == 200
     assert client.get("/api/docs/").status_code == 200
+
+
+def test_login_alias_redirects_to_the_operator_login() -> None:
+    response = Client().get("/login/")
+
+    assert response.status_code == 302
+    assert response["Location"] == "/operator/login/"

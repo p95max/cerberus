@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django.urls import path
+from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from accounts.views import (
@@ -43,6 +44,11 @@ urlpatterns = [
         "api/v1/recognition-events",
         RecognitionEventAPIView.as_view(),
         name="recognition-events",
+    ),
+    path(
+        "login/",
+        RedirectView.as_view(pattern_name="operator-login", permanent=False, query_string=True),
+        name="login-alias",
     ),
     path("operator/login/", OperatorLoginView.as_view(), name="operator-login"),
     path("operator/logout/", OperatorLogoutView.as_view(), name="operator-logout"),
