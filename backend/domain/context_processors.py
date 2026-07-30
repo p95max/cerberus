@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.conf import settings
 from accounts.roles import (
     ROLE_ADMINISTRATOR,
     ROLE_MANAGER,
@@ -49,6 +50,8 @@ def operator_permissions(request: Any) -> dict[str, Any]:
             request.user,
             (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR),
         ),
+        "can_submit_demo_event": settings.DEMO_EVENT_SUBMISSION_ENABLED
+        and has_role(request.user, (ROLE_ADMINISTRATOR, ROLE_MANAGER)),
         "current_operator_role": role,
         "manual_review_count": (
             AccessDecision.objects.filter(

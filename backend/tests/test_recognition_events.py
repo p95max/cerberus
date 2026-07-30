@@ -7,9 +7,18 @@ from django.contrib.auth.models import Group
 from django.test import Client
 from django.utils import timezone
 
-from accounts.models import ServiceCredential, User
+from accounts.models import AuditLog, ServiceCredential, User
 from accounts.roles import ROLE_OPERATOR, ensure_role_groups
-from domain.models import Camera, Gate, ParkingSite, RecognitionEvent
+from domain.models import (
+    AccessList,
+    AccessRule,
+    BarrierCommand,
+    Camera,
+    Gate,
+    ParkingSite,
+    RecognitionEvent,
+    Vehicle,
+)
 
 
 @pytest.fixture
@@ -149,3 +158,63 @@ def test_openapi_contains_recognition_event_contract() -> None:
     operation = response.json()["paths"]["/api/v1/recognition-events"]["post"]
     assert "RecognitionEventRequest" in str(operation)
     assert operation["responses"]["201"]
+
+
+@pytest.mark.django_db
+def test_end_to_end_demo_flow_covers_decisions_audit_and_manual_barrier_command(
+    janus_headers: dict[str, str], camera: Camera
+) -> None:
+    allow_vehicle = Vehicle.objects.create(normalized_plate="A123BC77", display_plate="A 123 BC 77")
+    deny_vehicle = Vehicle.objects.create(normalized_plate="B456DE77", display_plate="B 456 DE 77")
+    whitelist = AccessList.objects.create(
+        site=camera.gate.site, name="Demo allow", kind=AccessList.Kind.WHITELIST
+    )
+    blacklist = AccessList.objects.create(
+        site=camera.gate.site, name="Demo deny", kind=AccessList.Kind.BLACKLIST
+    )
+    AccessRule.objects.create(
+        access_list=whitelist,
+        vehicle=allow_vehicle,
+        gate=camera.gate,
+        decision=AccessRule.Decision.ALLOW,
+        priority=100,
+    )
+    AccessRule.objects.create(
+        access_list=blacklist,
+        vehicle=deny_vehicle,
+        gate=camera.gate,
+        decision=AccessRule.Decision.DENY,
+        priority=100,
+    )
+    client = Client()
+    results = {
+        plate: client.post(
+            "/api/v1/recognition-events",
+            data=payload(plate_number=plate),
+            content_type="application/json",
+            headers=janus_headers,
+        )
+        for plate in ("A 123 BC 77", "B 456 DE 77", "X 000 XX 77")
+    }
+
+    assert {plate: response.json()["decision"] for plate, response in results.items()} == {
+        "A 123 BC 77": "allow",
+        "B 456 DE 77": "deny",
+        "X 000 XX 77": "manual_review",
+    }
+    manual_event = RecognitionEvent.objects.get(pk=results["X 000 XX 77"].json()["event_id"])
+    operator = User.objects.get(username="janus-service")
+    client.force_login(operator)
+    opened = client.post(
+        f"/operator/events/{manual_event.pk}/",
+        {"action": "open", "reason": "verified_visitor"},
+    )
+
+    assert opened.status_code == 302
+    assert BarrierCommand.objects.filter(decision=manual_event.decision).exists()
+    assert AuditLog.objects.filter(
+        action="recognition_event_received", details__event_id=manual_event.pk
+    ).exists()
+    assert AuditLog.objects.filter(
+        action="manual_barrier_command_requested", details__event_id=manual_event.pk
+    ).exists()

@@ -9,7 +9,7 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import ServiceCredential, User
 from accounts.roles import (
     ROLE_ADMINISTRATOR,
     ROLE_MANAGER,
@@ -75,6 +75,7 @@ class Command(BaseCommand):
             )
         if demo_enabled:
             self.seed_demo_data()
+            self.ensure_demo_service_credential()
 
     def ensure_user(
         self,
@@ -181,3 +182,19 @@ class Command(BaseCommand):
             if not hasattr(event, "decision"):
                 decide(event)
         self.stdout.write(self.style.SUCCESS("Demo parking data is ready."))
+
+    def ensure_demo_service_credential(self) -> None:
+        username = os.getenv("DEMO_SERVICE_USERNAME", "janus-demo")
+        client_id = os.getenv("DEMO_SERVICE_CLIENT_ID", "janus-demo")
+        raw_key = os.getenv("DEMO_SERVICE_KEY", "janus-demo-key")
+        user, _ = User.objects.get_or_create(username=username, defaults={"is_active": True})
+        credential, created = ServiceCredential.objects.get_or_create(
+            client_id=client_id,
+            defaults={"user": user, "is_active": True, "key_hash": ""},
+        )
+        if created:
+            credential.set_key(raw_key)
+            credential.save(update_fields=("key_hash",))
+            self.stdout.write(self.style.SUCCESS(f"Created demo service credential: {client_id}"))
+        else:
+            self.stdout.write(f"Demo service credential already exists: {client_id}")

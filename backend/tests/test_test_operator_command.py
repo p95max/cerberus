@@ -4,7 +4,7 @@ import pytest
 from django.core.management import call_command
 from django.test import Client, override_settings
 
-from accounts.models import User
+from accounts.models import ServiceCredential, User
 from accounts.roles import ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
 from domain.models import AccessDecision, Camera, Gate, ParkingSite, RecognitionEvent, Vehicle
 
@@ -100,6 +100,8 @@ def test_ensure_test_operator_creates_idempotent_demo_data(
     assert Camera.objects.filter(external_id="demo-entry-camera").exists()
     assert Vehicle.objects.filter(normalized_plate="A123BC77").exists()
     assert RecognitionEvent.objects.filter(image_metadata__source="demo-seed").count() == 3
+    credential = ServiceCredential.objects.get(client_id="janus-demo")
+    assert credential.check_key("janus-demo-key")
     assert set(AccessDecision.objects.values_list("outcome", flat=True)) == {
         AccessDecision.Outcome.ALLOW,
         AccessDecision.Outcome.DENY,

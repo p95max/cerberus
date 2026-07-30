@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Any, ClassVar
+from uuid import uuid4
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
@@ -25,6 +27,7 @@ from domain.forms import (
     AccessRuleForm,
     BarrierControlSettingsForm,
     CameraForm,
+    DemoRecognitionSubmissionForm,
     EmergencyBarrierOpenForm,
     GateForm,
     ManualBarrierOpenForm,
@@ -47,6 +50,7 @@ from domain.models import (
 )
 from domain.services.barrier import barrier_auto_close_seconds, barrier_control_defaults
 from domain.services.retention import retention_policy_defaults
+from domain.services.recognition import submit_recognition_event
 from domain.tasks import dispatch_barrier_command
 
 
@@ -278,6 +282,49 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
             ),
         )
         return redirect("operator-barrier-control")
+
+
+class DemoRecognitionSubmissionView(OperatorAccessMixin, View):
+    template_name = "domain/operator/demo_submit.html"
+    allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER)
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        if not settings.DEMO_EVENT_SUBMISSION_ENABLED:
+            return HttpResponseForbidden("Demo event submission is disabled.")
+        return render(request, self.template_name, {"form": DemoRecognitionSubmissionForm()})
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        if not settings.DEMO_EVENT_SUBMISSION_ENABLED:
+            return HttpResponseForbidden("Demo event submission is disabled.")
+        form = DemoRecognitionSubmissionForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form}, status=400)
+        camera = form.cleaned_data["camera"]
+        submission = submit_recognition_event(
+            recognition_request_id=uuid4(),
+            plate_number=form.cleaned_data["plate_number"],
+            confidence=form.cleaned_data["confidence"],
+            camera_external_id=camera.external_id,
+            direction=camera.gate.direction,
+            captured_at=timezone.now(),
+            image_metadata={"source": "operator-demo-submit"},
+            submitted_by=request.user,
+        )
+        record_audit(
+            "recognition_event_received",
+            request=request,
+            actor=request.user,
+            details={
+                "event_id": submission.event.pk,
+                "decision": submission.decision.outcome,
+                "source": "operator_demo_submit",
+            },
+        )
+        messages.success(
+            request,
+            f"Demo event #{submission.event.pk} created: {submission.decision.outcome}.",
+        )
+        return redirect("operator-event-detail", pk=submission.event.pk)
 
 class EventDetailView(OperatorAccessMixin, DetailView):
     model = RecognitionEvent

@@ -371,6 +371,34 @@ def test_activity_log_labels_independent_manual_override_commands(
 
 
 @pytest.mark.django_db
+@override_settings(DEMO_EVENT_SUBMISSION_ENABLED=True)
+def test_manager_can_submit_a_demo_plate_event(
+    manager: User, manual_review_event: RecognitionEvent
+) -> None:
+    client = Client()
+    client.force_login(manager)
+
+    response = client.post(
+        "/operator/demo-submit/",
+        {
+            "plate_number": "X 000 XX 77",
+            "camera": manual_review_event.camera.pk,
+            "confidence": "0.9900",
+        },
+    )
+
+    event = RecognitionEvent.objects.exclude(pk=manual_review_event.pk).get()
+    assert response.status_code == 302
+    assert event.decision.outcome == AccessDecision.Outcome.MANUAL_REVIEW
+    assert event.image_metadata == {"source": "operator-demo-submit"}
+    assert AuditLog.objects.filter(
+        action="recognition_event_received",
+        actor=manager,
+        details__event_id=event.pk,
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_operator_can_keep_an_urgent_barrier_command_open_until_manual_close(
     operator: User, manual_review_event: RecognitionEvent
 ) -> None:

@@ -1,0 +1,6 @@
+{% extends "domain/operator/base.html" %}
+{% block content %}
+  <div class="page-heading"><div><p class="eyebrow">Development demonstration</p><h1>Submit a plate event</h1></div></div>
+  <section class="singleton-settings"><p>Send a synthetic recognition event through the same Core decision service used by the API. This page is available only in development to Managers and Administrators.</p><form method="post" class="stacked-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Evaluate access</button></form></section>
+  <section class="resource-detail"><h2>Demo scenarios</h2><ul><li><code>A 123 BC 77</code> — Allow</li><li><code>B 456 DE 77</code> — Deny</li><li><code>X 000 XX 77</code> — Manual review</li></ul></section>
+{% endblock %}

@@ -64,6 +64,24 @@ class EmergencyBarrierOpenForm(ManualBarrierOpenForm):
         return cleaned_data
 
 
+class DemoRecognitionSubmissionForm(forms.Form):
+    plate_number = forms.CharField(max_length=64, label="Plate number")
+    camera = forms.ModelChoiceField(
+        queryset=Camera.objects.filter(is_active=True, gate__is_active=True).select_related(
+            "gate__site"
+        ),
+        label="Camera",
+    )
+    confidence = forms.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        min_value=0,
+        max_value=1,
+        initial="0.9900",
+        label="Confidence",
+    )
+
+
 class ParkingSiteForm(forms.ModelForm):
     class Meta:
         model = ParkingSite

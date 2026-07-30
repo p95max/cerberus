@@ -35,6 +35,7 @@ if not DJANGO_ADMIN_URL:
 DJANGO_ADMIN_URL = f"{DJANGO_ADMIN_URL}/"
 DEBUG = False
 ALLOWED_HOSTS: list[str] = []
+DEMO_EVENT_SUBMISSION_ENABLED = env_bool("DEMO_EVENT_SUBMISSION_ENABLED", "false")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

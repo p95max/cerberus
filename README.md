@@ -66,6 +66,9 @@ CREATE_TEST_OPERATOR=true
 CREATE_TEST_MANAGER=true
 CREATE_TEST_ADMIN=true
 DJANGO_ADMIN_URL=admin/
+DEMO_EVENT_SUBMISSION_ENABLED=true
+DEMO_SERVICE_CLIENT_ID=janus-demo
+DEMO_SERVICE_KEY=janus-demo-key
 TEST_OPERATOR_USERNAME=operator
 TEST_OPERATOR_PASSWORD=operator-demo-password
 TEST_MANAGER_USERNAME=manager
@@ -129,6 +132,10 @@ All public URLs are served through Nginx on `http://localhost:8080` by default.
 | `/healthz` | Nginx health response |
 
 The REST API includes authentication, role management, audit logs, service identity and recognition-event ingestion under `/api/v1/`.
+
+For the reproducible MVP flow, Swagger request headers and screenshot targets, see
+[MVP demonstration](docs/mvp-demo.md). The system and request-flow diagrams are in
+[architecture](docs/architecture.md).
 
 ## Development commands
 
