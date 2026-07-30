@@ -108,13 +108,22 @@ def filtered_events(request: HttpRequest) -> QuerySet[RecognitionEvent]:
                 )
             except ValueError:
                 continue
-    sort_fields = {"time": "captured_at", "confidence": "confidence"}
+    sort_fields = {
+        "time": "captured_at",
+        "confidence": "confidence",
+        "object": "camera__gate__site__name",
+        "decision": "decision__outcome",
+    }
     sort = request.GET.get("sort", "time")
     if sort not in sort_fields:
         sort = "time"
     direction = request.GET.get("direction", "desc")
     prefix = "" if direction == "asc" else "-"
-    return events.order_by(f"{prefix}{sort_fields[sort]}", "-pk")
+    ordering = [f"{prefix}{sort_fields[sort]}"]
+    if sort == "object":
+        ordering.append(f"{prefix}camera__gate__name")
+    ordering.append("-pk")
+    return events.order_by(*ordering)
 
 
 class OperatorDashboardView(OperatorAccessMixin, View):
@@ -137,13 +146,13 @@ class OperatorDashboardView(OperatorAccessMixin, View):
         query_params = request.GET.copy()
         query_params.pop("page", None)
         sort = request.GET.get("sort", "time")
-        if sort not in {"time", "confidence"}:
+        if sort not in {"time", "confidence", "object", "decision"}:
             sort = "time"
         sort_direction = request.GET.get("direction", "desc")
         if sort_direction not in {"asc", "desc"}:
             sort_direction = "desc"
         sort_links = {}
-        for key in ("time", "confidence"):
+        for key in ("time", "confidence", "object", "decision"):
             params = query_params.copy()
             params["sort"] = key
             params["direction"] = "asc" if sort == key and sort_direction == "desc" else "desc"

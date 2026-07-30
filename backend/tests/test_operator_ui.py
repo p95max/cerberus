@@ -298,6 +298,38 @@ def test_operator_dashboard_sorts_events_by_confidence(
 
 
 @pytest.mark.django_db
+def test_operator_dashboard_sorts_events_by_object_and_decision(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    second_site = ParkingSite.objects.create(external_id="alpha-site", name="Alpha Site")
+    second_gate = Gate.objects.create(
+        site=second_site, external_id="alpha-gate", name="Alpha Gate", direction="entry"
+    )
+    second_camera = Camera.objects.create(
+        gate=second_gate, external_id="alpha-camera", name="Alpha Camera"
+    )
+    allow_event = RecognitionEvent.objects.create(
+        camera=second_camera,
+        normalized_plate="SORTTEST1",
+        confidence=Decimal("0.9000"),
+        captured_at=timezone.now(),
+    )
+    AccessDecision.objects.create(
+        event=allow_event,
+        outcome=AccessDecision.Outcome.ALLOW,
+        reason="Test decision.",
+    )
+    client = Client()
+    client.force_login(operator)
+
+    object_response = client.get("/operator/", {"sort": "object", "direction": "asc"})
+    decision_response = client.get("/operator/", {"sort": "decision", "direction": "asc"})
+
+    assert object_response.context["events"].object_list[0] == allow_event
+    assert decision_response.context["events"].object_list[0] == allow_event
+
+
+@pytest.mark.django_db
 def test_event_detail_exposes_reason_audit_and_confirmed_manual_command(
     operator: User, manual_review_event: RecognitionEvent
 ) -> None:
