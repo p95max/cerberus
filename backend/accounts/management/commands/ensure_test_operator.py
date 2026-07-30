@@ -151,18 +151,63 @@ class Command(BaseCommand):
             name="Demo blacklist",
             defaults={"kind": AccessList.Kind.BLACKLIST},
         )
-        AccessRule.objects.get_or_create(
+        for access_list, kind in (
+            (whitelist, AccessList.Kind.WHITELIST),
+            (blacklist, AccessList.Kind.BLACKLIST),
+        ):
+            access_list.kind = kind
+            access_list.is_active = True
+            access_list.deleted_at = None
+            access_list.save(update_fields=("kind", "is_active", "deleted_at", "updated_at"))
+
+        def ensure_demo_rule(
+            *, access_list: AccessList, vehicle: Vehicle, decision: str
+        ) -> AccessRule:
+            rule = (
+                AccessRule.objects.filter(
+                    access_list=access_list,
+                    vehicle=vehicle,
+                    gate=entry_gate,
+                )
+                .order_by("pk")
+                .first()
+            )
+            if rule is None:
+                return AccessRule.objects.create(
+                    access_list=access_list,
+                    vehicle=vehicle,
+                    gate=entry_gate,
+                    decision=decision,
+                    priority=0,
+                )
+            rule.decision = decision
+            rule.priority = 0
+            rule.is_active = True
+            rule.deleted_at = None
+            rule.save(
+                update_fields=(
+                    "decision",
+                    "priority",
+                    "is_active",
+                    "deleted_at",
+                    "updated_at",
+                )
+            )
+            return rule
+
+        allow_rule = ensure_demo_rule(
             access_list=whitelist,
             vehicle=allowed_vehicle,
-            gate=entry_gate,
-            defaults={"decision": AccessRule.Decision.ALLOW, "priority": 100},
+            decision=AccessRule.Decision.ALLOW,
         )
-        AccessRule.objects.get_or_create(
+        deny_rule = ensure_demo_rule(
             access_list=blacklist,
             vehicle=denied_vehicle,
-            gate=entry_gate,
-            defaults={"decision": AccessRule.Decision.DENY, "priority": 10},
+            decision=AccessRule.Decision.DENY,
         )
+        AccessRule.objects.filter(access_list__in=(whitelist, blacklist)).exclude(
+            pk__in=(allow_rule.pk, deny_rule.pk)
+        ).update(is_active=False, deleted_at=timezone.now())
         captured_at = timezone.now()
         for key, plate, offset in (
             ("allow", "A123BC77", 2),

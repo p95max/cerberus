@@ -6,7 +6,16 @@ from django.test import Client, override_settings
 
 from accounts.models import ServiceCredential, User
 from accounts.roles import ROLE_MANAGER, ROLE_OPERATOR, ensure_role_groups
-from domain.models import AccessDecision, Camera, Gate, ParkingSite, RecognitionEvent, Vehicle
+from domain.models import (
+    AccessDecision,
+    AccessList,
+    AccessRule,
+    Camera,
+    Gate,
+    ParkingSite,
+    RecognitionEvent,
+    Vehicle,
+)
 
 
 @pytest.mark.django_db
@@ -107,3 +116,29 @@ def test_ensure_test_operator_creates_idempotent_demo_data(
         AccessDecision.Outcome.DENY,
         AccessDecision.Outcome.MANUAL_REVIEW,
     }
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_seed_deactivates_conflicting_demo_rules(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CREATE_TEST_OPERATOR", "false")
+    monkeypatch.setenv("CREATE_TEST_MANAGER", "false")
+    monkeypatch.setenv("CREATE_TEST_ADMIN", "false")
+    monkeypatch.setenv("CREATE_DEMO_DATA", "true")
+
+    call_command("ensure_test_operator")
+    allow_vehicle = Vehicle.objects.get(normalized_plate="A123BC77")
+    blacklist = AccessList.objects.get(name="Demo blacklist")
+    gate = Gate.objects.get(external_id="demo-entry")
+    conflicting_rule = AccessRule.objects.create(
+        access_list=blacklist,
+        vehicle=allow_vehicle,
+        gate=gate,
+        decision=AccessRule.Decision.DENY,
+        priority=0,
+    )
+
+    call_command("ensure_test_operator")
+
+    conflicting_rule.refresh_from_db()
+    assert not conflicting_rule.is_active

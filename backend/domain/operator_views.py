@@ -636,7 +636,7 @@ class ActivityLogView(ManagerAccessMixin, View):
             for entry in page_obj
             if entry.details and entry.details.get("command_id")
         ]
-        commands = BarrierCommand.objects.in_bulk(command_ids)
+        commands = BarrierCommand.objects.select_related("decision").in_bulk(command_ids)
         for entry in page_obj:
             self.decorate_entry(entry, commands.get((entry.details or {}).get("command_id")))
         query_params = request.GET.copy()
@@ -684,7 +684,9 @@ class ActivityLogView(ManagerAccessMixin, View):
             if entry.action in {"barrier_closed_automatically", "barrier_closed_manually"}
             else ""
         )
-        entry.event_id = details.get("event_id")
+        entry.event_id = details.get("event_id") or (
+            command.decision.event_id if command is not None and command.decision_id else None
+        )
         entry.command_id = details.get("command_id")
         entry.is_independent_command = (
             (command is not None and command.decision_id is None)

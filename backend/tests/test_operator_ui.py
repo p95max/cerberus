@@ -662,6 +662,29 @@ def test_activity_log_supports_sorting_by_every_visible_column(manager: User, so
 
 
 @pytest.mark.django_db
+def test_activity_log_recovers_event_number_from_a_linked_barrier_command(
+    manager: User, manual_review_event: RecognitionEvent
+) -> None:
+    command = BarrierCommand.objects.create(
+        decision=manual_review_event.decision,
+        gate=manual_review_event.camera.gate,
+        status=BarrierCommand.Status.ACKNOWLEDGED,
+    )
+    AuditLog.objects.create(
+        action="barrier_command_acknowledged",
+        details={"command_id": command.pk},
+    )
+    client = Client()
+    client.force_login(manager)
+
+    response = client.get("/operator/activity-log/")
+
+    assert response.status_code == 200
+    assert f"Event #{manual_review_event.pk}".encode() in response.content
+    assert response.context["entries"][0].event_id == manual_review_event.pk
+
+
+@pytest.mark.django_db
 def test_manager_configuration_changes_are_audited_and_have_a_dedicated_log_tab(
     manager: User,
 ) -> None:
