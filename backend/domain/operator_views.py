@@ -364,6 +364,8 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                 barrier_status, barrier_status_label = "transition", "Opening"
             elif latest_barrier_command.status == BarrierCommand.Status.FAILED:
                 barrier_status, barrier_status_label = "failed", "Controller error"
+            elif latest_barrier_command.status == BarrierCommand.Status.EXPIRED:
+                barrier_status, barrier_status_label = "failed", "Command expired"
         context["barrier_status"] = barrier_status
         context["barrier_status_label"] = barrier_status_label
         return context
@@ -552,6 +554,7 @@ class ActivityLogView(ManagerAccessMixin, View):
     action_labels = {
         "barrier_closed_automatically": "Barrier closed automatically",
         "barrier_command_acknowledged": "Barrier command acknowledged",
+        "barrier_command_expired": "Barrier command expired before acknowledgement",
         "barrier_command_failed": "Barrier command failed",
         "barrier_command_retry_scheduled": "Barrier command retry scheduled",
         "barrier_closed_manually": "Barrier closed manually",

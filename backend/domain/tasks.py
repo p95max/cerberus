@@ -121,7 +121,7 @@ def close_barrier_after_delay(command_id: int) -> dict[str, Any]:
 
 @shared_task
 def close_due_barrier_commands() -> dict[str, int]:
-    """Reconcile auto-close commands in case an ETA task was lost during a worker restart."""
+    """Reconcile delayed commands after a worker restart or an interrupted dispatch."""
     command_ids = list(
         BarrierCommand.objects.filter(
             status=BarrierCommand.Status.ACKNOWLEDGED,
@@ -132,7 +132,25 @@ def close_due_barrier_commands() -> dict[str, int]:
     )
     for command_id in command_ids:
         close_barrier_after_delay.delay(command_id)
-    return {"scheduled": len(command_ids)}
+
+    expired_count = 0
+    with transaction.atomic():
+        expired_commands = BarrierCommand.objects.select_for_update().filter(
+            status__in=(BarrierCommand.Status.PENDING, BarrierCommand.Status.SENT),
+            auto_close_at__isnull=False,
+            auto_close_at__lte=timezone.now(),
+            closed_at__isnull=True,
+        )
+        for command in expired_commands:
+            command.status = BarrierCommand.Status.EXPIRED
+            command.last_error = "Automatic close deadline passed before controller acknowledgement."
+            command.save(update_fields=("status", "last_error", "updated_at"))
+            AuditLog.objects.create(
+                action="barrier_command_expired",
+                details=barrier_command_audit_details(command),
+            )
+            expired_count += 1
+    return {"scheduled": len(command_ids), "expired": expired_count}
 
 
 @shared_task

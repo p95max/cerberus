@@ -473,6 +473,28 @@ def test_due_barrier_command_is_reconciled_after_a_missed_eta_task(
 
 
 @pytest.mark.django_db
+def test_overdue_unacknowledged_barrier_command_is_expired(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    command = BarrierCommand.objects.create(
+        gate=manual_review_event.camera.gate,
+        requested_by=operator,
+        auto_close_at=timezone.now() - timedelta(seconds=1),
+        status=BarrierCommand.Status.SENT,
+    )
+
+    result = close_due_barrier_commands.run()
+
+    command.refresh_from_db()
+    assert result["expired"] == 1
+    assert command.status == BarrierCommand.Status.EXPIRED
+    assert command.last_error == "Automatic close deadline passed before controller acknowledgement."
+    assert AuditLog.objects.filter(
+        action="barrier_command_expired", details__command_id=command.pk
+    ).exists()
+
+
+@pytest.mark.django_db
 @override_settings(MOCK_BARRIER_AVAILABLE=False, BARRIER_COMMAND_MAX_RETRIES=1)
 def test_unavailable_barrier_controller_marks_command_failed(
     operator: User, manual_review_event: RecognitionEvent
