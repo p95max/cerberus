@@ -3,7 +3,11 @@ from fastapi.testclient import TestClient
 
 import janus_service.app as app_module
 from janus_service.app import app
-from janus_service.recognition import MockRecognitionEngine, recognition_result_from_tesseract_data
+from janus_service.recognition import (
+    MockRecognitionEngine,
+    preprocess_cropped_plate_image,
+    recognition_result_from_tesseract_data,
+)
 from janus_service.schemas import BoundingBox, RecognitionResponse, RecognitionStatus
 from janus_service.settings import settings
 
@@ -106,6 +110,21 @@ def test_tesseract_result_parser_returns_not_detected_without_valid_words() -> N
     )
 
     assert result.status is RecognitionStatus.NOT_DETECTED
+
+
+def test_opencv_preprocessing_returns_a_thresholded_plate_image() -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    source = Image.new("RGB", (80, 24), color="white")
+    encoded = BytesIO()
+    source.save(encoded, format="PNG")
+
+    preprocessed = preprocess_cropped_plate_image(encoded.getvalue())
+
+    assert preprocessed.upscale_factor == 2
+    assert preprocessed.image.shape == (48, 160)
 
 
 def test_recognition_rejects_unsupported_image_types() -> None:

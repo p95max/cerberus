@@ -26,8 +26,10 @@ access decision.
 For an image already cropped to a single licence plate, set
 `JANUS_RECOGNITION_BACKEND=tesseract`. The image includes the Tesseract binary and
 its Python dependencies; Janus returns Tesseract word candidates and bounding boxes.
-Candidate normalization, confidence thresholds and full-frame plate detection are
-added in the following Phase 11 steps.
+OpenCV converts the crop to grayscale, enlarges it, removes noise and applies
+adaptive thresholding before OCR. Set `JANUS_OPENCV_UPSCALE_FACTOR` (default `2`) to
+tune the enlargement. Candidate normalization, confidence thresholds and full-frame
+plate detection are added in the following Phase 11 steps.
 
 | Internal endpoint | Purpose |
 | --- | --- |

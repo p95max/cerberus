@@ -13,7 +13,11 @@ from collections.abc import Awaitable, Callable
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile, status
 from starlette.responses import Response
 
-from janus_service.recognition import RecognitionResult, build_recognition_engine
+from janus_service.recognition import (
+    InvalidRecognitionImageError,
+    RecognitionResult,
+    build_recognition_engine,
+)
 from janus_service.schemas import RecognitionResponse
 from janus_service.settings import settings
 
@@ -48,11 +52,17 @@ def configure_logging() -> None:
 
 configure_logging()
 app = FastAPI(title="Janus recognition service", version=VERSION)
-engine = build_recognition_engine(settings.recognition_backend)
+engine = build_recognition_engine(
+    settings.recognition_backend,
+    settings.opencv_upscale_factor,
+)
 
 
 @app.middleware("http")
-async def request_context(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+async def request_context(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.request_id = request_id
     started = time.monotonic()
@@ -73,7 +83,10 @@ async def request_context(request: Request, call_next: Callable[[Request], Await
 
 def require_service_authentication(x_api_key: str | None = Header(default=None)) -> None:
     if x_api_key is None or not secrets.compare_digest(x_api_key, settings.api_key):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service credentials.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid service credentials.",
+        )
 
 
 @app.get("/healthz")
@@ -88,7 +101,11 @@ async def readyz() -> dict[str, str]:
 
 @app.get("/version")
 async def version() -> dict[str, str]:
-    return {"service": "janus", "version": VERSION, "environment": settings.environment}
+    return {
+        "service": "janus",
+        "version": VERSION,
+        "environment": settings.environment,
+    }
 
 
 @app.post(
@@ -103,11 +120,17 @@ async def recognize(
 ) -> RecognitionResponse:
     """Recognize a plate image without making an access decision."""
     if image.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported image type.")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported image type.",
+        )
 
     image_bytes = await image.read(settings.max_file_size_bytes + 1)
     if len(image_bytes) > settings.max_file_size_bytes:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Image is too large.")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Image is too large.",
+        )
 
     started = time.monotonic()
     try:
@@ -116,7 +139,15 @@ async def recognize(
             timeout=settings.processing_timeout_seconds,
         )
     except TimeoutError as error:
-        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Recognition timed out.") from error
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Recognition timed out.",
+        ) from error
+    except InvalidRecognitionImageError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The uploaded file is not a valid image.",
+        ) from error
 
     return RecognitionResponse(
         recognition_request_id=recognition_request_id,
