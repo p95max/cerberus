@@ -30,7 +30,7 @@ def operator_permissions(request: Any) -> dict[str, Any]:
                 auto_close_at__isnull=True,
             ).select_related("gate__site")
         )
-        if request.user.is_authenticated
+        if settings.MOCK_BARRIER_CONTROL_ENABLED and request.user.is_authenticated
         else []
     )
     return {
@@ -46,7 +46,7 @@ def operator_permissions(request: Any) -> dict[str, Any]:
             request.user,
             (ROLE_ADMINISTRATOR, ROLE_MANAGER),
         ),
-        "can_control_barrier": has_role(
+        "can_control_barrier": settings.MOCK_BARRIER_CONTROL_ENABLED and has_role(
             request.user,
             (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR),
         ),

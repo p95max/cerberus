@@ -9,7 +9,7 @@
     <a href="{% url 'manage-resource' 'access-lists' %}" {% if resource == 'access-lists' %}aria-current="page"{% endif %}>Access lists</a>
     <a href="{% url 'manage-resource' 'access-rules' %}" {% if resource == 'access-rules' %}aria-current="page"{% endif %}>Access rules</a>
     {% if can_view_retention %}<a href="{% url 'manage-resource' 'retention' %}" {% if resource == 'retention' %}aria-current="page"{% endif %}>Data retention</a>{% endif %}
-    <a href="{% url 'manage-resource' 'barrier' %}" {% if resource == 'barrier' %}aria-current="page"{% endif %}>Barrier control</a>
+    {% if can_view_barrier_control %}<a href="{% url 'manage-resource' 'barrier' %}" {% if resource == 'barrier' %}aria-current="page"{% endif %}>Barrier control <span class="dev-badge">DEV</span></a>{% endif %}
   </nav>
   <p class="settings-description">{{ resource_description }}</p>
   {% if is_singleton_config %}

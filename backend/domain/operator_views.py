@@ -162,6 +162,10 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
     allowed_roles = (ROLE_ADMINISTRATOR, ROLE_MANAGER, ROLE_OPERATOR)
 
     @staticmethod
+    def is_enabled() -> bool:
+        return settings.MOCK_BARRIER_CONTROL_ENABLED
+
+    @staticmethod
     def emergency_form(data: Any | None = None) -> EmergencyBarrierOpenForm:
         return EmergencyBarrierOpenForm(
             data,
@@ -187,9 +191,13 @@ class BarrierControlQueueView(OperatorAccessMixin, View):
         )
 
     def get(self, request: HttpRequest) -> HttpResponse:
+        if not self.is_enabled():
+            return HttpResponseForbidden("Mock barrier control is disabled in this environment.")
         return self.render_page(request, self.emergency_form())
 
     def post(self, request: HttpRequest) -> HttpResponse:
+        if not self.is_enabled():
+            return HttpResponseForbidden("Mock barrier control is disabled in this environment.")
         if request.POST.get("action") == "close":
             command = get_object_or_404(
                 BarrierCommand,
@@ -396,6 +404,9 @@ class EventDetailView(OperatorAccessMixin, DetailView):
                     details={"event_id": event.pk},
                 )
                 messages.success(request, "Manual-review case closed.")
+            return redirect("operator-event-detail", pk=event.pk)
+        if not settings.MOCK_BARRIER_CONTROL_ENABLED:
+            messages.error(request, "Mock barrier control is disabled in this environment.")
             return redirect("operator-event-detail", pk=event.pk)
         if event.decision.manual_review_closed_at is not None:
             messages.error(request, "A closed manual-review case cannot open the barrier.")
@@ -790,6 +801,8 @@ class ResourceManagementView(OperatorAccessMixin, View):
     def can_view_resource(request: HttpRequest, resource: str) -> bool:
         if resource == "retention":
             return has_role(request.user, (ROLE_ADMINISTRATOR,))
+        if resource == "barrier":
+            return settings.MOCK_BARRIER_CONTROL_ENABLED
         return True
 
     @staticmethod
@@ -805,7 +818,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
         if not self.can_view_resource(request, resource):
-            return HttpResponseForbidden("Administrator role is required to view data retention.")
+            return HttpResponseForbidden("This configuration resource is disabled or unavailable.")
         model, form_class, title, item_label = config
         singleton = self.get_singleton(resource, model)
         form = form_class(instance=singleton) if self.can_manage(request) else None
@@ -819,7 +832,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
         if config is None:
             return HttpResponseForbidden("Unknown management resource.")
         if not self.can_view_resource(request, resource):
-            return HttpResponseForbidden("Administrator role is required to view data retention.")
+            return HttpResponseForbidden("This configuration resource is disabled or unavailable.")
         model, form_class, title, item_label = config
         singleton = self.get_singleton(resource, model)
         form = form_class(request.POST, instance=singleton)
@@ -861,6 +874,7 @@ class ResourceManagementView(OperatorAccessMixin, View):
                 "resource_description": RESOURCE_DESCRIPTIONS[self.kwargs["resource"]],
                 "can_manage": self.can_manage(request),
                 "can_view_retention": has_role(request.user, (ROLE_ADMINISTRATOR,)),
+                "can_view_barrier_control": settings.MOCK_BARRIER_CONTROL_ENABLED,
                 "singleton": singleton,
                 "is_singleton_config": singleton is not None,
             },
@@ -875,7 +889,7 @@ class ResourceUpdateView(OperatorAccessMixin, View):
 
     def get(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
         if not ResourceManagementView.can_view_resource(request, resource):
-            return HttpResponseForbidden("Administrator role is required to view data retention.")
+            return HttpResponseForbidden("This configuration resource is disabled or unavailable.")
         if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
         config = self.get_config(resource)
@@ -897,7 +911,7 @@ class ResourceUpdateView(OperatorAccessMixin, View):
 
     def post(self, request: HttpRequest, resource: str, pk: int) -> HttpResponse:
         if not ResourceManagementView.can_view_resource(request, resource):
-            return HttpResponseForbidden("Administrator role is required to view data retention.")
+            return HttpResponseForbidden("This configuration resource is disabled or unavailable.")
         if resource in SINGLETON_RESOURCE_DEFAULTS:
             return redirect("manage-resource", resource=resource)
         if not ResourceManagementView.can_manage(request):

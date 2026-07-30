@@ -49,6 +49,7 @@ th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .detail-grid, .management-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .decision-card h2 { margin: .15rem 0 .75rem; }
 .section-kicker { color: #8b949e; font-size: .78rem; letter-spacing: .12em; margin: 0; text-transform: uppercase; }
+.dev-badge { background: #30363d; border: 1px solid #8b949e; border-radius: .3rem; color: #c9d1d9; display: inline-block; font-size: .65rem; letter-spacing: .08em; margin-left: .35rem; padding: .16rem .3rem; vertical-align: middle; }
 .decision-reason { border-left: 3px solid #f2cc60; color: #e6edf3; margin: 0 0 1.25rem; padding-left: .85rem; }
 .event-facts { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
 .event-facts > div { background: #0d1117; border: 1px solid #30363d; border-radius: .4rem; min-width: 0; padding: .7rem; }

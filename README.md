@@ -67,6 +67,7 @@ CREATE_TEST_MANAGER=true
 CREATE_TEST_ADMIN=true
 DJANGO_ADMIN_URL=admin/
 DEMO_EVENT_SUBMISSION_ENABLED=true
+MOCK_BARRIER_CONTROL_ENABLED=true
 DEMO_SERVICE_CLIENT_ID=janus-demo
 DEMO_SERVICE_KEY=janus-demo-key
 TEST_OPERATOR_USERNAME=operator
@@ -106,14 +107,14 @@ After sign-in, the console provides:
 
 - event list with filters, a result counter and pagination of 20 events per page;
 - a Manual review queue with its event counter in the navigation;
-- event detail and an audited **Open** command for manual-review events (the command is queued for the mock controller and does not operate a physical barrier);
+- event detail and an audited **Open** command for manual-review events (**DEV / mock**: the command is queued for the mock controller and does not operate a physical barrier);
 - Configuration sections for parking sites/objects, gates, cameras, vehicles, access lists and access rules. Each tab explains its purpose; **Access rules** define the Allow/Deny decision for a vehicle at a gate and use priority to resolve conflicts.
-- an independent **Barrier control** screen for urgent manual openings without a recognition event, with a reason, optional request number and either an automatic-close delay or an indefinite opening;
+- an independent **Barrier control** screen (**DEV / mock**) for urgent manual openings without a recognition event, with a reason, optional request number and either an automatic-close delay or an indefinite opening;
 - an **Activity log** for Managers and Administrators. It has an **All activity** view and a **Configuration changes** view that records the actor, time, IP, object and before/after values for configuration updates. All seven table columns can be sorted; Administrators can export the filtered log as dated JSON.
 
 Administrators can edit every Configuration section. Managers can edit all operational sections except **Data retention**. Operators and read-only users can view the operational sections without forms or edit actions; **Data retention** is hidden from them and returns 403 on direct access.
 
-The mock barrier automatically closes after 10 seconds by default. Its countdown is shown on the event page and the automatic close is recorded in Audit history. Managers and administrators can change the delay in **Configuration → Barrier control**; `BARRIER_AUTO_CLOSE_SECONDS` in `.env` is only the initial value.
+The **DEV / mock** barrier automatically closes after 10 seconds by default. Its countdown is shown on the event page and the automatic close is recorded in Audit history. Managers and administrators can change the delay in **Configuration → Barrier control**; `BARRIER_AUTO_CLOSE_SECONDS` in `.env` is only the initial value. Set `MOCK_BARRIER_CONTROL_ENABLED=false` to hide the control screen and settings, disable manual opening, and reject direct requests. It defaults to `false` outside development.
 
 ## Endpoints
 

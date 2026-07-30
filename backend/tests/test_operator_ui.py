@@ -217,6 +217,31 @@ def test_operator_dashboard_shows_events_status_and_filters(
 
 
 @pytest.mark.django_db
+@override_settings(MOCK_BARRIER_CONTROL_ENABLED=False)
+def test_mock_barrier_control_can_be_disabled_by_environment(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    client = Client()
+    client.force_login(operator)
+
+    dashboard = client.get("/operator/")
+    event_detail = client.get(f"/operator/events/{manual_review_event.pk}/")
+    control = client.get("/operator/barrier-control/")
+    settings_page = client.get("/operator/manage/barrier/")
+    opening = client.post(
+        f"/operator/events/{manual_review_event.pk}/",
+        {"action": "open", "reason": "vip", "comment": "Development toggle check."},
+    )
+
+    assert b">Barrier control<" not in dashboard.content
+    assert b"Open the barrier for this case" not in event_detail.content
+    assert control.status_code == 403
+    assert settings_page.status_code == 403
+    assert opening.status_code == 302
+    assert manual_review_event.decision.barrier_commands.count() == 0
+
+
+@pytest.mark.django_db
 def test_operator_dashboard_paginates_events(
     operator: User, manual_review_event: RecognitionEvent
 ) -> None:
