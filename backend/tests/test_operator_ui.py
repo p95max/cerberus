@@ -206,7 +206,7 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert response.status_code == 200
     assert b"A123BC77" in response.content
     assert b"Manual review" in response.content
-    assert f"Event #{manual_review_event.pk}".encode() in response.content
+        assert f">#{manual_review_event.pk}<".encode() in response.content
     assert b"Apply filters" in response.content
     assert b'aria-current="page">Events' in response.content
     assert b'events awaiting manual review">1<' in response.content
@@ -681,7 +681,7 @@ def test_activity_log_recovers_event_number_from_a_linked_barrier_command(
     response = client.get("/operator/activity-log/")
 
     assert response.status_code == 200
-    assert f"Event #{manual_review_event.pk}".encode() in response.content
+    assert f">#{manual_review_event.pk}<".encode() in response.content
     assert response.context["entries"][0].event_id == manual_review_event.pk
 
 
