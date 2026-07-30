@@ -18,9 +18,10 @@ The application network is private: only Nginx publishes a host port.
 
 Janus is an internal FastAPI service and has no public port. Phase 10 provides its
 health contract, service authentication, request tracing and a stable recognition
-response schema; OCR/ANPR is intentionally not connected yet. The placeholder
-engine therefore returns `not_detected` for a valid image and never makes an access
-decision.
+response schema. The current `mock` engine is deterministic: upload
+`recognized-A123BC77.png` or `uncertain-A123BC77.png` to return a matching mock
+candidate; any other valid image name returns `not_detected`. It never makes an
+access decision.
 
 | Internal endpoint | Purpose |
 | --- | --- |
