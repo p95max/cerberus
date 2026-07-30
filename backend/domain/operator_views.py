@@ -78,9 +78,7 @@ class OperatorAccessMixin(LoginRequiredMixin):
 
 
 def filtered_events(request: HttpRequest) -> QuerySet[RecognitionEvent]:
-    events = RecognitionEvent.objects.select_related("camera__gate__site", "decision").order_by(
-        "-captured_at"
-    )
+    events = RecognitionEvent.objects.select_related("camera__gate__site", "decision")
     if site := request.GET.get("site"):
         events = events.filter(camera__gate__site_id=site)
     if gate := request.GET.get("gate"):
@@ -110,7 +108,13 @@ def filtered_events(request: HttpRequest) -> QuerySet[RecognitionEvent]:
                 )
             except ValueError:
                 continue
-    return events
+    sort_fields = {"time": "captured_at", "confidence": "confidence"}
+    sort = request.GET.get("sort", "time")
+    if sort not in sort_fields:
+        sort = "time"
+    direction = request.GET.get("direction", "desc")
+    prefix = "" if direction == "asc" else "-"
+    return events.order_by(f"{prefix}{sort_fields[sort]}", "-pk")
 
 
 class OperatorDashboardView(OperatorAccessMixin, View):
@@ -132,6 +136,18 @@ class OperatorDashboardView(OperatorAccessMixin, View):
         page_obj = paginator.get_page(request.GET.get("page"))
         query_params = request.GET.copy()
         query_params.pop("page", None)
+        sort = request.GET.get("sort", "time")
+        if sort not in {"time", "confidence"}:
+            sort = "time"
+        sort_direction = request.GET.get("direction", "desc")
+        if sort_direction not in {"asc", "desc"}:
+            sort_direction = "desc"
+        sort_links = {}
+        for key in ("time", "confidence"):
+            params = query_params.copy()
+            params["sort"] = key
+            params["direction"] = "asc" if sort == key and sort_direction == "desc" else "desc"
+            sort_links[key] = params.urlencode()
         return render(
             request,
             self.template_name,
@@ -139,6 +155,9 @@ class OperatorDashboardView(OperatorAccessMixin, View):
                 "events": page_obj,
                 "events_count": paginator.count,
                 "query_string": query_params.urlencode(),
+                "sort": sort,
+                "sort_direction": sort_direction,
+                "sort_links": sort_links,
                 "title": title,
                 "heading_icon": heading_icon,
                 "sites": ParkingSite.objects.filter(is_active=True),

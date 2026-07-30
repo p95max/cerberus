@@ -11,5 +11,4 @@ COPY pyproject.toml ./
 RUN poetry install --only main --no-root
 COPY . ./
 
-# Phase 1 has no FastAPI application yet. Phase 7 replaces this with Janus.
-CMD ["python", "-c", "import time; time.sleep(2147483647)"]
+CMD ["sh", "-c", "uvicorn janus_service.app:app --host 0.0.0.0 --port ${JANUS_PORT:-8001}"]

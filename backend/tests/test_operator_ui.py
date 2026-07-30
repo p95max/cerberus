@@ -206,7 +206,7 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert response.status_code == 200
     assert b"A123BC77" in response.content
     assert b"Manual review" in response.content
-        assert f">#{manual_review_event.pk}<".encode() in response.content
+    assert f">#{manual_review_event.pk}<".encode() in response.content
     assert b"Apply filters" in response.content
     assert b'aria-current="page">Events' in response.content
     assert b'events awaiting manual review">1<' in response.content
@@ -269,6 +269,32 @@ def test_operator_dashboard_paginates_events(
     assert len(response.context["events"].object_list) == 1
     assert b"21 events found" in response.content
     assert b"Page 2 of 2" in response.content
+
+
+@pytest.mark.django_db
+def test_operator_dashboard_sorts_events_by_confidence(
+    operator: User, manual_review_event: RecognitionEvent
+) -> None:
+    lower_confidence_event = RecognitionEvent.objects.create(
+        camera=manual_review_event.camera,
+        normalized_plate="LOWCONF1",
+        confidence=Decimal("0.4500"),
+        captured_at=timezone.now(),
+    )
+    AccessDecision.objects.create(
+        event=lower_confidence_event,
+        outcome=AccessDecision.Outcome.MANUAL_REVIEW,
+        reason="Test decision.",
+    )
+    client = Client()
+    client.force_login(operator)
+
+    response = client.get("/operator/", {"sort": "confidence", "direction": "asc"})
+
+    assert response.status_code == 200
+    assert response.context["events"].object_list[0] == lower_confidence_event
+    assert response.context["sort"] == "confidence"
+    assert response.context["sort_direction"] == "asc"
 
 
 @pytest.mark.django_db

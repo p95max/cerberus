@@ -14,6 +14,29 @@ Cerberus is a parking and vehicle access-control platform. It accepts vehicle-re
 
 The application network is private: only Nginx publishes a host port.
 
+## Janus recognition service
+
+Janus is an internal FastAPI service and has no public port. Phase 10 provides its
+health contract, service authentication, request tracing and a stable recognition
+response schema; OCR/ANPR is intentionally not connected yet. The placeholder
+engine therefore returns `not_detected` for a valid image and never makes an access
+decision.
+
+| Internal endpoint | Purpose |
+| --- | --- |
+| `/healthz` | Liveness check |
+| `/readyz` | Readiness check |
+| `/version` | Service version and environment |
+| `POST /api/v1/recognize` | Authenticated recognition request |
+
+`POST /api/v1/recognize` accepts a multipart `image` (`jpeg`, `png`, or `webp`) and
+requires `X-API-Key` plus `X-Recognition-Request-ID`. It returns the same request ID,
+an explicit `recognized`, `uncertain`, or `not_detected` status, candidates,
+bounding boxes and processing time. `X-Request-ID` is accepted for tracing and always
+returned in the response. Configure the API key, maximum image size and processing
+timeout through `JANUS_API_KEY`, `JANUS_MAX_FILE_SIZE_BYTES`, and
+`JANUS_PROCESSING_TIMEOUT_SECONDS`.
+
 ## Run locally
 
 Prerequisites: Docker Desktop with Docker Compose v2.22 or newer. Python 3.12+ and Poetry are needed only to run tools and tests directly on the host.
