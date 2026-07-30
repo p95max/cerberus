@@ -580,7 +580,9 @@ def test_activity_log_is_filterable_and_sortable_for_managers(
     assert response.status_code == 200
     assert b"Activity log" in response.content
     assert b"Manual-review case closed" in response.content
-    assert b"Sign-in failed" not in response.content
+    assert [entry.action for entry in response.context["entries"]] == [
+        "manual_review_case_closed"
+    ]
     assert response.context["entries_count"] == 1
 
 
@@ -709,7 +711,7 @@ def test_barrier_settings_are_editable_for_manager_and_read_only_for_operator(
     response = client.get("/operator/manage/barrier/")
 
     assert response.status_code == 200
-    assert b"Barrier control (read-only)" in response.content
+    assert b"Configuration (read-only)" in response.content
     assert b"10 seconds" in response.content
 
     client.force_login(manager)
