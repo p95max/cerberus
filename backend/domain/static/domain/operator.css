@@ -35,6 +35,7 @@ table { border-collapse: collapse; min-width: 720px; width: 100%; }
 th, td { border-bottom: 1px solid #30363d; padding: .8rem; text-align: left; }
 th { color: #8b949e; font-size: .8rem; text-transform: uppercase; }
 .clickable-row { cursor: pointer; }
+.event-reference { white-space: nowrap; }
 .case-closed-row { color: #8b949e; }
 .case-closed-row .status { opacity: .7; }
 .clickable-row:hover { background: #161b22; }

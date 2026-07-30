@@ -206,6 +206,7 @@ def test_operator_dashboard_shows_events_status_and_filters(
     assert response.status_code == 200
     assert b"A123BC77" in response.content
     assert b"Manual review" in response.content
+    assert f"Event #{manual_review_event.pk}".encode() in response.content
     assert b"Apply filters" in response.content
     assert b'aria-current="page">Events' in response.content
     assert b'events awaiting manual review">1<' in response.content
