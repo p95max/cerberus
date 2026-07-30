@@ -712,7 +712,8 @@ def test_barrier_settings_are_editable_for_manager_and_read_only_for_operator(
 
     assert response.status_code == 200
     assert b"Configuration (read-only)" in response.content
-    assert b"10 seconds" in response.content
+    assert b"Automatic close delay" in response.content
+    assert b"Save" not in response.content
 
     client.force_login(manager)
     response = client.get("/operator/manage/barrier/")
